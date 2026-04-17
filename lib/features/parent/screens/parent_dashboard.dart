@@ -140,7 +140,7 @@ class _ParentDashboardState extends State<ParentDashboard> {
         decoration: BoxDecoration(
           gradient: isActive
               ? const LinearGradient(
-                  colors: [Colors.blueAccent, Colors.indigoAccent],
+                  colors: [Colors.blueAccent, Color.fromRGBO(83, 109, 254, 1)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight)
               : null,
@@ -333,7 +333,7 @@ class _ParentHomeState extends State<_ParentHome> {
                               Text(
                                 (post is PostModel && post.isEvent)
                                     ? 'ÉVÉNEMENT'
-                                    : 'ACTUALITÉ',
+                                    : 'ÉVÉNTS',
                                 style: TextStyle(
                                     color: accentColor,
                                     fontWeight: FontWeight.w900,

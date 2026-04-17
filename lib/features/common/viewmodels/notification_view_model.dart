@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
 
@@ -56,7 +57,10 @@ class NotificationViewModel extends ChangeNotifier {
     }
 
     try {
-      _notifications = await _apiService.getNotifications();
+      final fetched = await _apiService.getNotifications();
+      final prefs = await SharedPreferences.getInstance();
+      final deletedIds = prefs.getStringList('deleted_notification_ids') ?? <String>[];
+      _notifications = fetched.where((n) => !deletedIds.contains(n.id)).toList();
     } catch (e) {
       if (!silent) _errorMessage = _apiService.getLocalizedErrorMessage(e);
     } finally {
@@ -95,6 +99,49 @@ class NotificationViewModel extends ChangeNotifier {
 
     try {
       await _apiService.markAllNotificationsRead();
+    } catch (e) {
+      _notifications = oldNotifications;
+      _errorMessage = _apiService.getLocalizedErrorMessage(e);
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteNotification(String id) async {
+    // Optimistic UI
+    final oldNotifications = List<NotificationModel>.from(_notifications);
+    _notifications.removeWhere((n) => n.id == id);
+    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final deletedIds = prefs.getStringList('deleted_notification_ids') ?? <String>[];
+      if (!deletedIds.contains(id)) {
+        deletedIds.add(id);
+        await prefs.setStringList('deleted_notification_ids', deletedIds);
+      }
+      await _apiService.deleteNotification(id);
+    } catch (e) {
+      _notifications = oldNotifications;
+      _errorMessage = _apiService.getLocalizedErrorMessage(e);
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteAllNotifications() async {
+    // Optimistic UI
+    final oldNotifications = List<NotificationModel>.from(_notifications);
+    final idsToDelete = _notifications.map((n) => n.id).toList();
+    _notifications.clear();
+    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final deletedIds = prefs.getStringList('deleted_notification_ids') ?? <String>[];
+      for (final id in idsToDelete) {
+        if (!deletedIds.contains(id)) deletedIds.add(id);
+      }
+      await prefs.setStringList('deleted_notification_ids', deletedIds);
+      await _apiService.deleteAllNotifications();
     } catch (e) {
       _notifications = oldNotifications;
       _errorMessage = _apiService.getLocalizedErrorMessage(e);

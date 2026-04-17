@@ -964,6 +964,24 @@ class ApiService {
     }
   }
 
+  /// DELETE /notifications/:id
+  Future<void> deleteNotification(String id) async {
+    try {
+      await _dio.delete('/notifications/$id');
+    } catch (e) {
+      debugPrint('[API] deleteNotification failed: $e');
+    }
+  }
+
+  /// DELETE /notifications
+  Future<void> deleteAllNotifications() async {
+    try {
+      await _dio.delete('/notifications');
+    } catch (e) {
+      debugPrint('[API] deleteAllNotifications failed: $e');
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // EVENTS / CALENDAR  –  /api/events/*
   // ---------------------------------------------------------------------------

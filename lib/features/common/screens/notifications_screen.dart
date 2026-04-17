@@ -49,6 +49,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final List<String> filters = [
       'all',
       'exams',
+      'notes',
       'devoirs',
       'evenements',
       'payment',
@@ -65,16 +66,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             final filteredNotifications = vm.notifications.where((n) {
               // Category filter
               bool categoryMatch = true;
+              final String tType = n.type.toLowerCase();
+              final String tTitle = n.title.toLowerCase();
+              final String tBody = n.body.toLowerCase();
+              
               if (_selectedFilter == 'exams') {
-                categoryMatch = n.type == 'exam' || n.type == 'examen';
+                categoryMatch = tType.contains('exam') || tTitle.contains('exam') || tBody.contains('exam');
+              } else if (_selectedFilter == 'notes') {
+                categoryMatch = tType.contains('note') || tType.contains('grade') || tTitle.contains('note') || tTitle.contains('bulletin') || tBody.contains('note') || tBody.contains('bulletin') || tBody.contains('résultat');
               } else if (_selectedFilter == 'devoirs') {
-                categoryMatch = n.type == 'devoir' || n.type == 'assignment';
+                categoryMatch = tType.contains('devoir') || tType.contains('assignment') || tTitle.contains('devoir') || tBody.contains('devoir');
               } else if (_selectedFilter == 'evenements') {
-                categoryMatch = n.type == 'event' || n.type == 'evenement';
+                categoryMatch = tType.contains('event') || tType.contains('evenement') || tTitle.contains('evenement') || tTitle.contains('événement') || tBody.contains('event') || tBody.contains('evenement') || tBody.contains('événement');
               } else if (_selectedFilter == 'payment') {
-                categoryMatch = n.type == 'payment';
+                categoryMatch = tType.contains('payment') || tType.contains('paiement') || tTitle.contains('paiement') || tTitle.contains('payement') || tBody.contains('payment') || tBody.contains('paiement');
               } else if (_selectedFilter == 'message') {
-                categoryMatch = n.type == 'message';
+                categoryMatch = tType.contains('message') || tTitle.contains('message') || tBody.contains('message');
               } else if (_selectedFilter != 'all') {
                 categoryMatch = false;
               }
@@ -124,6 +131,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               fontWeight: FontWeight.w900,
                               fontSize: 10),
                         ),
+                      ),
+                    if (vm.notifications.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.delete_sweep_rounded,
+                            color: Colors.redAccent, size: 22),
+                        onPressed: () {
+                          HapticFeedback.mediumImpact();
+                          ConfirmationDialog.show(
+                            context,
+                            title: 'Supprimer tout',
+                            message:
+                                'Voulez-vous vraiment supprimer toutes vos notifications ?',
+                            onConfirm: () => vm.deleteAllNotifications(),
+                          );
+                        },
                       ),
                   ],
                   flexibleSpace: FlexibleSpaceBar(
@@ -186,12 +208,56 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
                           final n = filteredNotifications[index];
-                          return InkWell(
-                            onTap: () {
-                              vm.markAsRead(n.id);
-                              _showNotificationDetail(context, n);
+                          return Dismissible(
+                            key: ValueKey(n.id),
+                            direction: DismissDirection.endToStart,
+                            confirmDismiss: (direction) async {
+                              HapticFeedback.mediumImpact();
+                              return await showDialog(
+                                context: context,
+                                builder: (context) {
+                                  return AlertDialog(
+                                    backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                    title: Text('Supprimer', style: TextStyle(fontWeight: FontWeight.w900, color: isDark ? Colors.white : Colors.black87)),
+                                    content: Text('Voulez-vous vraiment supprimer cette notification ?', style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(false),
+                                        child: Text('Annuler', style: TextStyle(color: isDark ? Colors.white60 : Colors.black45, fontWeight: FontWeight.bold)),
+                                      ),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.redAccent,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        ),
+                                        onPressed: () => Navigator.of(context).pop(true),
+                                        child: const Text('Supprimer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
                             },
-                            child: _NotificationCard(notification: n),
+                            onDismissed: (direction) {
+                              vm.deleteNotification(n.id);
+                            },
+                            background: Container(
+                              alignment: Alignment.centerRight,
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              decoration: BoxDecoration(
+                                color: Colors.redAccent.withValues(alpha: 0.9),
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              child: const Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 32),
+                            ),
+                            child: InkWell(
+                              onTap: () {
+                                vm.markAsRead(n.id);
+                              },
+                              child: _NotificationCard(notification: n),
+                            ),
                           )
                               .animate()
                               .fadeIn(delay: (index * 50).ms)
@@ -285,6 +351,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return loc.translate('all_filter');
       case 'exams':
         return "Examens";
+      case 'notes':
+        return "Notes";
       case 'devoirs':
         return "Devoirs";
       case 'evenements':
@@ -387,57 +455,6 @@ class _NotificationCard extends StatelessWidget {
         return Icons.info_rounded;
     }
   }
-}
-
-void _showNotificationDetail(BuildContext context, NotificationModel n) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
-    builder: (context) => Container(
-      height: MediaQuery.of(context).size.height * 0.6,
-      decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF0F172A) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32))),
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(n.title,
-              style:
-                  const TextStyle(fontWeight: FontWeight.w900, fontSize: 22)),
-          const SizedBox(height: 8),
-          Text(_formatDate(n.time),
-              style: const TextStyle(
-                  color: Colors.grey, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 24),
-          Text(n.body,
-              style: TextStyle(
-                  fontSize: 16,
-                  height: 1.6,
-                  color: isDark ? Colors.white70 : Colors.black87)),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16))),
-              child: const Text("FERMER",
-                  style: TextStyle(
-                      fontWeight: FontWeight.w900, color: Colors.white)),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
 }
 
 Color _getTypeColor(String type) {

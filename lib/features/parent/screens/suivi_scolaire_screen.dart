@@ -297,13 +297,7 @@ class _SuiviScolaireScreenState extends State<SuiviScolaireScreen> {
         final subjectId = subjects[index];
         final subjectAvg = vm.calculateSubjectAverage(subjectId);
         final subjectName = AppLocalizations.of(context)!.translate(subjectId);
-        final color = (index % 4 == 0
-            ? Colors.blueAccent
-            : index % 4 == 1
-                ? Colors.orangeAccent
-                : index % 4 == 2
-                    ? Colors.purpleAccent
-                    : const Color(0xFF10B981));
+        final color = _getSubjectColor(subjectId, subjectName, index);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 20),
@@ -355,13 +349,7 @@ class _SuiviScolaireScreenState extends State<SuiviScolaireScreen> {
                         ],
                       ),
                       child: Icon(
-                        index % 4 == 0
-                            ? Icons.functions_rounded
-                            : index % 4 == 1
-                                ? Icons.auto_stories_rounded
-                                : index % 4 == 2
-                                    ? Icons.biotech_rounded
-                                    : Icons.translate_rounded,
+                        _getSubjectIcon(subjectId, subjectName),
                         color: Colors.white,
                         size: 28,
                       ),
@@ -383,15 +371,71 @@ class _SuiviScolaireScreenState extends State<SuiviScolaireScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 6),
-                          // Stats row
+                          // Ranking info
+                          Row(
+                            children: [
+                              Icon(Icons.leaderboard_rounded,
+                                  size: 14,
+                                  color: color.withValues(alpha: 0.6)),
+                              const SizedBox(width: 6),
+                              Text(
+                                "Rang: ${vm.getSubjectRank(subjectId) ?? '-'} / ${vm.getSubjectClassSize(subjectId) ?? '-'}",
+                                style: TextStyle(
+                                  color: isDark
+                                      ? Colors.white54
+                                      : Colors.black54,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          // History Button
+                          GestureDetector(
+                            onTap: () => _showSubjectHistory(subjectId, color),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    color.withValues(alpha: 0.15),
+                                    color.withValues(alpha: 0.05)
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: color.withValues(alpha: 0.2)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    "Historique du Suivi",
+                                    style: TextStyle(
+                                      color: color,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Icon(Icons.arrow_forward_ios_rounded,
+                                      size: 10, color: color),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 12),
                     // Value Display
                     Container(
-                      height: 70,
-                      width: 70,
+                      height: 72,
+                      width: 72,
                       decoration: BoxDecoration(
                         color: isDark
                             ? Colors.white.withValues(alpha: 0.05)
@@ -410,13 +454,15 @@ class _SuiviScolaireScreenState extends State<SuiviScolaireScreen> {
                                 fontWeight: FontWeight.w900,
                                 fontSize: 24,
                                 color: color,
-                                height: 1),
+                                height: 1.1),
                           ),
+                          const SizedBox(height: 2),
                           Text(
-                            '/10',
+                            'pts',
                             style: TextStyle(
                                 fontWeight: FontWeight.w900,
-                                fontSize: 10,
+                                fontSize: 11,
+                                letterSpacing: 1,
                                 color: color.withValues(alpha: 0.5)),
                           ),
                         ],
@@ -2755,6 +2801,115 @@ class _SuiviScolaireScreenState extends State<SuiviScolaireScreen> {
     );
   }
 
+  void _showSubjectHistory(String subjectId, Color subjectColor) {
+    final vm = context.read<SuiviViewModel>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final subjectGrades = vm.grades.where((g) => g.subject == subjectId).toList();
+    subjectGrades.sort((a, b) => b.date.compareTo(a.date));
+
+    final subjectName = AppLocalizations.of(context)!.translate(subjectId);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.75,
+            decoration: BoxDecoration(
+              color: isDark
+                  ? const Color(0xFF0F172A).withValues(alpha: 0.95)
+                  : Colors.white.withValues(alpha: 0.95),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+              border: Border.all(
+                  color: isDark
+                      ? Colors.white10
+                      : Colors.black.withValues(alpha: 0.05)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white10 : Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(32, 24, 24, 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Parcours Académique",
+                              style: TextStyle(
+                                  color: isDark
+                                      ? Colors.blueAccent
+                                      : Colors.blueAccent,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 10,
+                                  letterSpacing: 1.5),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              subjectName,
+                              style: TextStyle(
+                                  color: isDark ? Colors.white : Colors.black,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 22),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(Icons.close_rounded,
+                            color: isDark ? Colors.white54 : Colors.black54),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: subjectGrades.isEmpty
+                      ? Center(
+                          child: Text("Aucun historique pour cette matière",
+                              style: TextStyle(
+                                  color: isDark ? Colors.white38 : Colors.black38,
+                                  fontWeight: FontWeight.bold)),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 8),
+                          itemCount: subjectGrades.length,
+                          itemBuilder: (context, index) {
+                            final g = subjectGrades[index];
+                            final isSem1 = g.semester?.toString().contains('1') ?? false;
+                            final color = isSem1
+                                ? Color.lerp(subjectColor, isDark ? Colors.white : Colors.black, 0.4) ?? subjectColor
+                                : subjectColor;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _HistoryRowItem(
+                                  h: g, isDark: isDark, themeColor: color),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // Helper widget for detail rows in sheet
   Widget _buildSheetInfoRow(IconData icon, String text, bool isDark) {
     return Row(
@@ -2810,8 +2965,9 @@ class _HistoryRowItemState extends State<_HistoryRowItem> {
     final secondaryTextColor = widget.isDark ? Colors.white54 : Colors.black54;
     final h = widget.h;
     final hLabel = h.title ?? AppLocalizations.of(context)!.translate(h.type);
+    final semesterClean = h.semester?.toString().replaceAll(RegExp(r'[Ss]'), '').trim();
     final title =
-        "$hLabel${h.semester != null ? ' (Semestre ${h.semester})' : ''}";
+        "$hLabel${h.semester != null ? ' (Semestre $semesterClean)' : ''}";
     final score = '${h.grade.toStringAsFixed(1)}/${h.maxGrade.toInt()}';
     final hasComponents = h.components != null && h.components!.isNotEmpty;
 
@@ -2951,4 +3107,43 @@ class _CountUpText extends StatelessWidget {
       },
     );
   }
+}
+
+IconData _getSubjectIcon(String id, String name) {
+  final lower = '$id $name'.toLowerCase();
+  if (lower.contains('math') || lower.contains('رياضيات')) return Icons.functions_rounded;
+  if (lower.contains('arab') || lower.contains('عرب')) return Icons.language_rounded;
+  if (lower.contains('fran') || lower.contains('french') || lower.contains('فرنس')) return Icons.auto_stories_rounded;
+  if (lower.contains('islam') || lower.contains('tarbiya') || lower.contains('إسلام') || lower.contains('دين')) return Icons.mosque_rounded;
+  if (lower.contains('eng') || lower.contains('angl') || lower.contains('إنجليزي')) return Icons.translate_rounded;
+  if (lower.contains('phys') || lower.contains('chim') || lower.contains('فيزياء') || lower.contains('كيمياء')) return Icons.science_rounded;
+  if (lower.contains('svt') || lower.contains('bio') || lower.contains('science') || lower.contains('علوم')) return Icons.biotech_rounded;
+  if (lower.contains('info') || lower.contains('comput') || lower.contains('حاسوب') || lower.contains('informatique')) return Icons.computer_rounded;
+  if (lower.contains('hist') || lower.contains('geo') || lower.contains('تاريخ') || lower.contains('جغرافيا')) return Icons.public_rounded;
+  if (lower.contains('sport') || lower.contains('eps') || lower.contains('رياضة')) return Icons.sports_soccer_rounded;
+  if (lower.contains('philo') || lower.contains('فلسفة')) return Icons.psychology_rounded;
+  return Icons.book_rounded;
+}
+
+Color _getSubjectColor(String id, String name, int fallbackIndex) {
+  final lower = '$id $name'.toLowerCase();
+  if (lower.contains('math') || lower.contains('رياضيات')) return Colors.blueAccent;
+  if (lower.contains('arab') || lower.contains('عرب')) return Colors.purpleAccent;
+  if (lower.contains('fran') || lower.contains('french') || lower.contains('فرنس')) return Colors.orangeAccent;
+  if (lower.contains('islam') || lower.contains('tarbiya') || lower.contains('إسلام') || lower.contains('دين')) return const Color(0xFF10B981);
+  if (lower.contains('eng') || lower.contains('angl') || lower.contains('إنجليزي')) return Colors.redAccent;
+  if (lower.contains('phys') || lower.contains('chim') || lower.contains('فيزياء') || lower.contains('كيمياء')) return Colors.cyanAccent;
+  if (lower.contains('svt') || lower.contains('bio') || lower.contains('science') || lower.contains('علوم')) return Colors.greenAccent;
+  if (lower.contains('info') || lower.contains('comput') || lower.contains('حاسوب') || lower.contains('informatique')) return Colors.indigoAccent;
+  if (lower.contains('hist') || lower.contains('geo') || lower.contains('تاريخ') || lower.contains('جغرافيا')) return Colors.brown;
+  if (lower.contains('sport') || lower.contains('eps') || lower.contains('رياضة')) return Colors.deepOrangeAccent;
+  if (lower.contains('philo') || lower.contains('فلسفة')) return Colors.pinkAccent;
+
+  return (fallbackIndex % 4 == 0
+      ? Colors.blueAccent
+      : fallbackIndex % 4 == 1
+          ? Colors.orangeAccent
+          : fallbackIndex % 4 == 2
+              ? Colors.purpleAccent
+              : const Color(0xFF10B981));
 }

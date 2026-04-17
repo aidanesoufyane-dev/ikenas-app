@@ -59,8 +59,8 @@ void main() async {
 
   // Init after runApp so the Android Activity is ready for permission dialogs
   NotificationService.instance.init().catchError(
-    (e) => debugPrint('[Main] NotificationService init failed: $e'),
-  );
+        (e) => debugPrint('[Main] NotificationService init failed: $e'),
+      );
 }
 
 class IkenasApp extends StatelessWidget {
@@ -89,7 +89,15 @@ class IkenasApp extends StatelessWidget {
       builder: (context, child) {
         return Directionality(
           textDirection: appState.textDirection,
-          child: child!,
+          child: Container(
+            color: Colors.black,
+            child: SafeArea(
+              bottom: false,
+              left: false,
+              right: false,
+              child: child!,
+            ),
+          ),
         );
       },
       // Production: Use AuthGate for proper authentication flow

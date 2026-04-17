@@ -49,7 +49,10 @@ class DeepSpaceBackground extends StatelessWidget {
           ),
         ],
 
-        child,
+        Padding(
+          padding: const EdgeInsets.only(top: 6.0),
+          child: child,
+        ),
       ],
     );
   }
