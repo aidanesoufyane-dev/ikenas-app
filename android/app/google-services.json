@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "451436284213",
+    "project_id": "ikenas-ad83c",
+    "storage_bucket": "ikenas-ad83c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:451436284213:android:fe256ad8b6bc799c12e47c",
+        "android_client_info": {
+          "package_name": "com.example.schoolline"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCeA7LSVtDeNwZdCLnFbQ-me8H4WkLBCo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
