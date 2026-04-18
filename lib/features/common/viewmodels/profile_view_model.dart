@@ -33,8 +33,17 @@ class ProfileViewModel extends ChangeNotifier {
       if (phone != null) updatedData['phone'] = phone;
       if (avatarIndex != null) updatedData['avatarIndex'] = avatarIndex;
 
-      final updatedUser = await _apiService.updateProfile(updatedData);
-      _appState.updateUser(updatedUser);
+      await _apiService.updateProfile(updatedData);
+      
+      if (user != null) {
+        final newUser = user!.copyWith(
+          name: name ?? user!.name,
+          email: email ?? user!.email,
+          phone: phone ?? user!.phone,
+          avatarIndex: avatarIndex ?? user!.avatarIndex,
+        );
+        _appState.updateUser(newUser);
+      }
     } catch (e) {
       _errorMessage = _apiService.getLocalizedErrorMessage(e);
     } finally {

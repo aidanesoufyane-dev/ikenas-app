@@ -241,6 +241,10 @@ class AppState extends ChangeNotifier {
 
   void updateUser(UserModel user) {
     _currentUser = user;
+    final token = AuthService.instance.getStoredToken();
+    if (token != null) {
+      AuthService.instance.saveSession(token: token, user: user);
+    }
     notifyListeners();
   }
 }

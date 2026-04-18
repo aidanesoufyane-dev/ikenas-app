@@ -765,7 +765,8 @@ class PostModel {
       eventDate: json['eventDate'],
       // NOTE: Don't fall back to json['status'] — that holds post publication state,
       // not the user's RSVP answer ('oui'/'non').
-      participationStatus: json['participationStatus'] ??
+      participationStatus: json['myAttendance']?['status'] ??
+          json['participationStatus'] ??
           json['participation_status'] ??
           json['userResponse'] ??
           json['userParticipation'] ??
@@ -996,40 +997,69 @@ class ChatMessageModel {
   final String id;
   final String threadId;
   final String senderId;
+  final String senderName;
+  final String? senderAvatar;
   final String content;
   final String time;
+  final DateTime? createdAt;
   final bool isMe;
   final String type; // 'text', 'image', 'video', 'document', 'voice'
   final Map<String, dynamic>? metadata; // for duration, size, etc.
+  final List<String> attachments;
 
   ChatMessageModel({
     required this.id,
     required this.threadId,
     required this.senderId,
+    this.senderName = '',
+    this.senderAvatar,
     required this.content,
     required this.time,
+    this.createdAt,
     this.isMe = false,
     this.type = 'text',
     this.metadata,
+    this.attachments = const [],
   });
 
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
     String senderId = json['senderId']?.toString() ?? '';
+    String senderName = '';
+    String? senderAvatar;
     // Handle nested sender object
     if (json['sender'] is Map) {
-      senderId = (json['sender']['id'] ?? json['sender']['_id'])?.toString() ??
-          senderId;
+      final s = json['sender'];
+      senderId = (s['id'] ?? s['_id'])?.toString() ?? senderId;
+      senderName = s['fullName']?.toString() ?? s['name']?.toString() ?? '';
+      senderAvatar = s['avatar']?.toString();
+    }
+
+    // Extract attachments
+    List<String> attachments = [];
+    if (json['attachments'] is List) {
+      for (final a in json['attachments']) {
+        if (a is String && a.isNotEmpty) {
+          attachments.add(a);
+        } else if (a is Map) {
+          final url = a['url']?.toString() ?? a['path']?.toString() ?? '';
+          if (url.isNotEmpty) attachments.add(url);
+        }
+      }
     }
 
     return ChatMessageModel(
       id: (json['id'] ?? json['_id'])?.toString() ?? '',
       threadId: (json['threadId'] ?? json['message_id'])?.toString() ?? '',
       senderId: senderId,
+      senderName: senderName,
+      senderAvatar: processImageUrl(senderAvatar),
       content: json['content'] ?? '',
       time: json['time'] ?? json['createdAt'] ?? '',
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
       isMe: json['isMe'] ?? false,
       type: json['type'] ?? 'text',
       metadata: json['metadata'],
+      attachments: attachments,
     );
   }
 
@@ -1038,11 +1068,14 @@ class ChatMessageModel {
       'id': id,
       'threadId': threadId,
       'senderId': senderId,
+      'senderName': senderName,
+      'senderAvatar': senderAvatar,
       'content': content,
       'time': time,
       'isMe': isMe,
       'type': type,
       'metadata': metadata,
+      'attachments': attachments,
     };
   }
 }
@@ -1099,9 +1132,10 @@ class EventModel {
       time: json['time'] ?? '',
       type: json['type'] ?? '',
       location: json['location'],
-      // NOTE: Don't fall back to json['status'] — that holds event publication state
-      // (e.g. 'active', 'upcoming'), not the user's RSVP answer ('oui'/'non').
-      participationStatus: json['participationStatus'] ??
+      // Map the `myAttendance` field returned by the backend event endpoint.
+      // E.g., `myAttendance: { status: 'going' }` -> 'going'
+      participationStatus: json['myAttendance']?['status'] ??
+          json['participationStatus'] ??
           json['participation_status'] ??
           json['userResponse'] ??
           json['userParticipation'] ??

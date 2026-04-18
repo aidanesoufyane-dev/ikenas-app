@@ -239,6 +239,54 @@ class ChatViewModel extends ChangeNotifier {
     }
   }
 
+  // ── editMessage ──────────────────────────────────────────────
+  Future<bool> editMessage(String messageId, String newContent) async {
+    try {
+      final api = await _getApi();
+      final ok = await api.editMessage(messageId, newContent);
+      if (ok) {
+        final idx = _activeMessages.indexWhere((m) => m.id == messageId);
+        if (idx != -1) {
+          final old = _activeMessages[idx];
+          _activeMessages[idx] = ChatMessageModel(
+            id: old.id,
+            threadId: old.threadId,
+            senderId: old.senderId,
+            senderName: old.senderName,
+            senderAvatar: old.senderAvatar,
+            content: newContent,
+            time: old.time,
+            createdAt: old.createdAt,
+            isMe: old.isMe,
+            metadata: old.metadata,
+            attachments: old.attachments,
+          );
+          notifyListeners();
+        }
+      }
+      return ok;
+    } catch (e) {
+      debugPrint('[ParentChatVM] editMessage error: $e');
+      return false;
+    }
+  }
+
+  // ── deleteMessage ───────────────────────────────────────────
+  Future<bool> deleteMessage(String messageId) async {
+    try {
+      final api = await _getApi();
+      final ok = await api.deleteMessage(messageId);
+      if (ok) {
+        _activeMessages.removeWhere((m) => m.id == messageId);
+        notifyListeners();
+      }
+      return ok;
+    } catch (e) {
+      debugPrint('[ParentChatVM] deleteMessage error: $e');
+      return false;
+    }
+  }
+
   void sendTypingIndicator(String threadId) {}
   void stopTypingIndicator(String threadId) {}
 
@@ -373,15 +421,41 @@ class ChatViewModel extends ChangeNotifier {
     final senderId = _extractSenderId(msg);
     final createdAt =
         DateTime.tryParse(msg['createdAt']?.toString() ?? '') ?? DateTime.now();
+
+    // Extract sender name & avatar
+    String senderName = '';
+    String? senderAvatar;
+    final senderObj = msg['sender'];
+    if (senderObj is Map) {
+      senderName = (senderObj['fullName'] ?? senderObj['name'] ?? '').toString();
+      senderAvatar = senderObj['avatar']?.toString();
+    }
+
+    // Extract attachments
+    List<String> attachments = [];
+    if (msg['attachments'] is List) {
+      for (final a in msg['attachments']) {
+        if (a is String && a.isNotEmpty) {
+          attachments.add(a);
+        } else if (a is Map) {
+          final url = (a['url'] ?? a['path'] ?? '').toString();
+          if (url.isNotEmpty) attachments.add(url);
+        }
+      }
+    }
+
     return ChatMessageModel(
       id: (msg['_id'] ?? msg['id'])?.toString() ?? '',
       threadId: _activeThreadId ?? '',
       senderId: senderId,
+      senderName: senderName,
+      senderAvatar: senderAvatar,
       content: msg['content']?.toString() ?? '',
       time: _fmt(createdAt),
+      createdAt: createdAt,
       isMe: senderId == _currentUserId,
-      // Store allowReply so the UI knows if the parent can respond
       metadata: {'allowReply': msg['allowReply'] ?? false},
+      attachments: attachments,
     );
   }
 

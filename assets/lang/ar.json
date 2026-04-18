@@ -577,5 +577,15 @@
   "send": "إرسال",
   "document_selected": "تم اختيار المستند",
   "justified": "غياب مبرر",
-  "unjustified": "غياب"
+  "unjustified": "غياب",
+  "today": "اليوم",
+  "yesterday": "أمس",
+  "copy": "نسخ",
+  "edit_message": "تعديل الرسالة",
+  "delete_message": "حذف الرسالة",
+  "delete_message_confirm": "هل أنت متأكد من حذف هذه الرسالة؟",
+  "message_copied": "تم نسخ الرسالة",
+  "cancel": "إلغاء",
+  "save": "حفظ",
+  "delete": "حذف"
 }

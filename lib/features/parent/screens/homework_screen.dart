@@ -439,9 +439,10 @@ class _HomeworkListItemState extends State<_HomeworkListItem> {
     final success = await widget.onStatusUpdate(HomeworkStatus.done);
     if (!mounted) return;
     setState(() => _isMarkingDone = false);
+    final errorMsg = Provider.of<HomeworkViewModel>(context, listen: false).errorMessage;
     final msg = success
         ? 'Devoir marqué comme terminé !'
-        : 'Erreur, veuillez réessayer';
+        : (errorMsg ?? 'Erreur, veuillez réessayer');
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg, style: const TextStyle(fontWeight: FontWeight.bold)),
       backgroundColor: success ? Colors.greenAccent.shade700 : Colors.redAccent,
@@ -530,25 +531,28 @@ class _HomeworkListItemState extends State<_HomeworkListItem> {
                 Row(
                   children: [
                     if (homework.type != 'exam')
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                              color: statusColor.withValues(alpha: 0.3)),
-                        ),
-                        child: Text(
-                          statusLabel.toUpperCase(),
-                          style: TextStyle(
-                              color: statusColor,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 10,
-                              letterSpacing: 1.5),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: statusColor.withValues(alpha: 0.3)),
+                          ),
+                          child: Text(
+                            statusLabel.toUpperCase(),
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: statusColor,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 10,
+                                letterSpacing: 1.5),
+                          ),
                         ),
                       ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 6),

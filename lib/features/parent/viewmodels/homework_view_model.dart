@@ -11,6 +11,8 @@ class HomeworkViewModel extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   Set<String> _seenAssignmentIds = {};
+  // IDs the parent has locally marked as done — persisted so polling never reverts them
+  final Set<String> _localDoneIds = {};
   bool _initialized = false;
 
   List<HomeworkModel> get homeworks => _homeworks;
@@ -81,9 +83,14 @@ class HomeworkViewModel extends ChangeNotifier {
 
       final combined = [...results[0], ...results[1]];
 
-      // Data Sync: Overwriting _homeworks ensures that items deleted in backend
-      // (not returned in list) disappear from the UI.
-      _homeworks = combined;
+      // Preserve locally-marked-done items so the 1-second poll never reverts them
+      // before (or even after) the server confirms the submission.
+      _homeworks = combined.map((h) {
+        if (_localDoneIds.contains(h.id)) {
+          return h.copyWith(status: HomeworkStatus.done);
+        }
+        return h;
+      }).toList();
 
       // Sort by due date (closest first)
       _homeworks.sort((a, b) {
@@ -106,6 +113,14 @@ class HomeworkViewModel extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final seenList = prefs.getStringList('seen_homework_ids') ?? [];
     _seenAssignmentIds = seenList.toSet();
+
+    final doneList = prefs.getStringList('local_done_homework_ids') ?? [];
+    _localDoneIds.addAll(doneList);
+  }
+
+  Future<void> _saveLocalDoneIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('local_done_homework_ids', _localDoneIds.toList());
   }
 
   Future<void> markAllAsSeen() async {
@@ -132,32 +147,39 @@ class HomeworkViewModel extends ChangeNotifier {
     final index = _homeworks.indexWhere((h) => h.id == homeworkId);
     if (index == -1) return false;
 
-    final originalStatus = _homeworks[index].status;
-
-    // Optimistic UI update
-    _homeworks[index] = _homeworks[index].copyWith(status: newStatus);
-    notifyListeners();
-
     try {
       final h = _homeworks[index];
-      // Sync with API - Use h.id because endpoint expects Assignment ID, and pass studentId
+
       final updatedHomework = await _apiService
           .updateHomeworkStatus(h.id, studentId, newStatus, filePath: filePath);
 
-      // Update with backend response if valid
+      if (newStatus == HomeworkStatus.done) {
+        // Lock this ID so polling never reverts it back to not-started
+        _localDoneIds.add(h.id);
+        _saveLocalDoneIds();
+      }
+
       _homeworks[index] = _homeworks[index].copyWith(
+        status: newStatus,
         submissionId: updatedHomework.submissionId,
       );
-
-      // If we transition to 'done', we might want to refresh the list to get new submission IDs
-      if (newStatus == HomeworkStatus.done) {
-        // Optional: fetchHomework(currentStudentId);
-      }
+      notifyListeners();
       return true;
     } catch (e) {
-      // Rollback on actual error
-      _homeworks[index] = _homeworks[index].copyWith(status: originalStatus);
       _errorMessage = _apiService.getLocalizedErrorMessage(e);
+      
+      // If the backend says it was already submitted, treat it as a success locally
+      if (_errorMessage != null && _errorMessage!.toLowerCase().contains('soumis')) {
+        if (newStatus == HomeworkStatus.done) {
+          _localDoneIds.add(_homeworks[index].id);
+          _saveLocalDoneIds();
+        }
+        _homeworks[index] = _homeworks[index].copyWith(status: newStatus);
+        _errorMessage = null; // Clear the error since we are handling it gracefully
+        notifyListeners();
+        return true;
+      }
+
       notifyListeners();
       return false;
     }

@@ -576,5 +576,15 @@
   "document_selected": "Document selected",
   "justified": "Justified Absence",
   "unknown": "Unknown",
-  "unknown_prof": "Unknown"
+  "unknown_prof": "Unknown",
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "copy": "Copy",
+  "edit_message": "Edit message",
+  "delete_message": "Delete message",
+  "delete_message_confirm": "Are you sure you want to delete this message?",
+  "message_copied": "Message copied",
+  "cancel": "Cancel",
+  "save": "Save",
+  "delete": "Delete"
 }

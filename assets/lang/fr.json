@@ -581,5 +581,15 @@
   "unjustified": "ABSENCE",
   "processing": "Traitement par le serveur...",
   "unknown": "Inconnu",
-  "unknown_prof": "Inconnu"
+  "unknown_prof": "Inconnu",
+  "today": "Aujourd'hui",
+  "yesterday": "Hier",
+  "copy": "Copier",
+  "edit_message": "Modifier le message",
+  "delete_message": "Supprimer le message",
+  "delete_message_confirm": "Voulez-vous vraiment supprimer ce message ?",
+  "message_copied": "Message copié",
+  "cancel": "Annuler",
+  "save": "Enregistrer",
+  "delete": "Supprimer"
 }
