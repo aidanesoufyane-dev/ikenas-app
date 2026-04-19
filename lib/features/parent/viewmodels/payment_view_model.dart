@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
+import '../services/pdf_receipt_service.dart';
+import 'package:printing/printing.dart';
 
 class PaymentViewModel extends ChangeNotifier {
   final ApiService _apiService = ApiService.instance;
@@ -229,24 +232,92 @@ class PaymentViewModel extends ChangeNotifier {
     }
   }
 
+  /// Generate and open a local PDF receipt directly from a PaymentModel.
+  /// This avoids the lookup-by-ID issue with placeholder payments.
+  Future<bool> generateLocalReceipt(PaymentModel payment) async {
+    _isDownloading = true;
+    notifyListeners();
+
+    try {
+      if (payment.status == PaymentStatus.paid) {
+        // Save local PDF and open using OpenFilex to show a preview dialog
+        final pdfBytes = await PdfReceiptService.generateReceipt(payment);
+        
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/recu_${payment.month}_${payment.studentName ?? payment.id}.pdf');
+        await file.writeAsBytes(pdfBytes);
+        
+        final result = await OpenFilex.open(file.path);
+        if (result.type != ResultType.done) {
+          _errorMessage = 'Could not open PDF: ${result.message}';
+          return false;
+        }
+        return true;
+      } else {
+        // For unpaid — try to fetch from backend
+        final endpoint = await _apiService.downloadReceipt(
+            payment.id,
+            payment.paymentType == PaymentType.transport
+                ? 'transport'
+                : 'scolarity');
+        final tempDir = await getTemporaryDirectory();
+        final savePath = '${tempDir.path}/receipt_${payment.id}.pdf';
+        final downloadedPath =
+            await _apiService.downloadInternalFile(endpoint, savePath);
+        if (downloadedPath != null) {
+          final result = await OpenFilex.open(downloadedPath);
+          if (result.type != ResultType.done) {
+            _errorMessage = 'Could not open PDF: ${result.message}';
+            return false;
+          }
+          return true;
+        }
+        return false;
+      }
+    } catch (e) {
+      _errorMessage = 'Erreur génération reçu: $e';
+      return false;
+    } finally {
+      _isDownloading = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> getReceiptUrl(String paymentId, String type) async {
     _isDownloading = true;
     notifyListeners();
 
     try {
-      final endpoint = await _apiService.downloadReceipt(paymentId, type);
+      // Try to find the payment in the raw API list first
+      PaymentModel? payment;
+      try {
+        payment = _allPayments.firstWhere((p) => p.id == paymentId);
+      } catch (_) {
+        // Not found in _allPayments — search in month groups
+        for (final group in _monthGroups) {
+          if (group.scolarity?.id == paymentId) {
+            payment = group.scolarity;
+            break;
+          }
+          if (group.transport?.id == paymentId) {
+            payment = group.transport;
+            break;
+          }
+        }
+      }
 
-      // Get temporary directory to save the file
+      if (payment != null) {
+        return generateLocalReceipt(payment);
+      }
+
+      // Final fallback: backend download
+      final endpoint = await _apiService.downloadReceipt(paymentId, type);
       final tempDir = await getTemporaryDirectory();
       final fileName = 'receipt_${paymentId}_$type.pdf';
       final savePath = '${tempDir.path}/$fileName';
-
-      // Download the file internally with headers
       final downloadedPath =
           await _apiService.downloadInternalFile(endpoint, savePath);
-
       if (downloadedPath != null) {
-        // Open the file using the local viewer
         final result = await OpenFilex.open(downloadedPath);
         if (result.type != ResultType.done) {
           _errorMessage = 'Could not open PDF: ${result.message}';

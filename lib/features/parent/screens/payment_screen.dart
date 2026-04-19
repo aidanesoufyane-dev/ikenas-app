@@ -700,10 +700,8 @@ class _PaymentScreenState extends State<PaymentScreen>
                                 if (isDownloading) return;
                                 HapticFeedback.mediumImpact();
 
-                                // Use the new internal download and open flow
-                                final success = await vm.getReceiptUrl(
-                                    payment.id,
-                                    isTransport ? 'transport' : 'scolarity');
+                                // Generate local PDF receipt directly from the payment model
+                                final success = await vm.generateLocalReceipt(payment);
 
                                 if (success) {
                                   HapticFeedback.heavyImpact();
@@ -711,9 +709,9 @@ class _PaymentScreenState extends State<PaymentScreen>
                                 } else {
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
+                                      SnackBar(
                                         content: Text(
-                                            'Erreur lors du téléchargement du reçu.'),
+                                            vm.errorMessage ?? 'Erreur lors du téléchargement du reçu.'),
                                         backgroundColor: Colors.redAccent,
                                       ),
                                     );
