@@ -92,11 +92,11 @@ class HomeworkViewModel extends ChangeNotifier {
         return h;
       }).toList();
 
-      // Sort by due date (closest first)
+      // Sort by date (newest first)
       _homeworks.sort((a, b) {
-        if (a.dueDate.isEmpty) return 1;
-        if (b.dueDate.isEmpty) return -1;
-        return a.dueDate.compareTo(b.dueDate);
+        if (a.startDate.isEmpty) return 1;
+        if (b.startDate.isEmpty) return -1;
+        return b.startDate.compareTo(a.startDate);
       });
     } catch (e) {
       if (!silent) _errorMessage = _apiService.getLocalizedErrorMessage(e);
