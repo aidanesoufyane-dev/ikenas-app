@@ -7,7 +7,6 @@ import 'package:open_filex/open_filex.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
 import '../services/pdf_receipt_service.dart';
-import 'package:printing/printing.dart';
 
 class PaymentViewModel extends ChangeNotifier {
   final ApiService _apiService = ApiService.instance;

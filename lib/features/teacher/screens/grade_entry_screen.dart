@@ -23,7 +23,6 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
   Map<String, dynamic>? _selectedSubjectData;
 
   List<StudentModel> _currentStudents = [];
-  bool _isLoadingStudents = false;
 
   // --- Local selection ---
   final List<String> _terms = ['term_1', 'term_2'];
@@ -134,19 +133,17 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
 
   Future<void> _loadStudentsForClass() async {
     if (_selectedClass == null) return;
-    setState(() => _isLoadingStudents = true);
     try {
       final students =
           await ApiService.instance.getStudentsByClass(_selectedClass!.id);
       if (!mounted) return;
       setState(() {
         _currentStudents = students;
-        _isLoadingStudents = false;
       });
       _rebuildGradeControllers();
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoadingStudents = false);
+      debugPrint('[GradeEntry] _loadStudentsForClass error: $e');
     }
   }
 

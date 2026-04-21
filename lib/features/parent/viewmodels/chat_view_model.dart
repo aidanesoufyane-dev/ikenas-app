@@ -271,6 +271,23 @@ class ChatViewModel extends ChangeNotifier {
     }
   }
 
+  // ── deleteConversation ─────────────────────────────────────────
+  Future<bool> deleteConversation(String threadId) async {
+    try {
+      // Since the backend doesn't have a clear "delete entire thread" 
+      // endpoint for parents yet, we just remove it locally.
+      _threads.removeWhere((t) => t.id == threadId);
+      if (_activeThreadId == threadId) {
+        clearActiveChat();
+      }
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('[ParentChatVM] deleteConversation error: $e');
+      return false;
+    }
+  }
+
   // ── deleteMessage ───────────────────────────────────────────
   Future<bool> deleteMessage(String messageId) async {
     try {
