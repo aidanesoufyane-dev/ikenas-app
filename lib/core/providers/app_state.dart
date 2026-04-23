@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/notification_service.dart';
+import '../services/websocket_service.dart';
 
 class AppState extends ChangeNotifier {
   AppState() {
@@ -89,7 +91,16 @@ class AppState extends ChangeNotifier {
       if (session != null) {
         _currentUser = session.user;
         ApiService.instance.setToken(session.token);
+
+        // Reconnect WebSocket on session restore
+        WebSocketService().initialize(token: session.token, baseUrl: ApiService.instance.baseUrl);
+
         notifyListeners();
+        // Re-register FCM token on session restore (token may have rotated)
+        final fcmToken = await NotificationService.instance.getToken();
+        if (fcmToken != null) {
+          await ApiService.instance.registerFcmToken(fcmToken);
+        }
         return true;
       }
       return false;
@@ -115,6 +126,15 @@ class AppState extends ChangeNotifier {
 
         // Set token in API service
         ApiService.instance.setToken(token);
+
+        // Connect WebSocket for real-time notifications
+        WebSocketService().initialize(token: token, baseUrl: ApiService.instance.baseUrl);
+
+        // Register FCM device token so backend can send push notifications
+        final fcmToken = await NotificationService.instance.getToken();
+        if (fcmToken != null) {
+          await ApiService.instance.registerFcmToken(fcmToken);
+        }
 
         notifyListeners();
       } else {

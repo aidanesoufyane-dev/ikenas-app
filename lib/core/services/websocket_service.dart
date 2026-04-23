@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
-import '../config/app_config.dart';
 import '../models/models.dart';
 import 'notification_service.dart';
 
@@ -44,7 +43,12 @@ class WebSocketService {
 
   /// Call once after login with the JWT token.
   void initialize({required String token, required String baseUrl}) {
-    _connect(token: token, serverUrl: AppConfig.wsBaseUrl);
+    // Derive WS URL from the HTTP base URL (strip /api, swap http→ws)
+    final serverRoot = baseUrl
+        .replaceAll(RegExp(r'/api/?$'), '')
+        .replaceFirst('https://', 'wss://')
+        .replaceFirst('http://', 'ws://');
+    _connect(token: token, serverUrl: serverRoot);
   }
 
   void _connect({required String token, required String serverUrl}) {
@@ -188,6 +192,12 @@ class WebSocketService {
         'data': data,
       });
       debugPrint('[Socket.io] Notification received');
+
+      // Show local notification so user sees it while app is open
+      final map = data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
+      final title = map['title']?.toString() ?? 'Nouvelle notification';
+      final body = map['message']?.toString() ?? '';
+      NotificationService.instance.show(title: title, body: body);
     } catch (e) {
       debugPrint('[Socket.io] Error handling notification: $e');
     }

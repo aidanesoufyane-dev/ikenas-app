@@ -104,6 +104,16 @@ class ApiService {
     throw Exception('Login failed: ${response.statusCode}');
   }
 
+  /// POST /auth/fcm-token — register device push token
+  Future<void> registerFcmToken(String fcmToken) async {
+    try {
+      await _dio.post('/auth/fcm-token', data: {'fcmToken': fcmToken});
+    } catch (e) {
+      // Non-fatal — don't block login if this fails
+      debugPrint('[ApiService] registerFcmToken failed: $e');
+    }
+  }
+
   /// GET /auth/me → UserModel
   Future<UserModel> getProfile() async {
     final response = await _dio.get('/auth/me');
@@ -905,15 +915,32 @@ class ApiService {
   // ---------------------------------------------------------------------------
 
   Future<BusLocationModel> getBusLocation(String studentId) async {
-    debugPrint('[API] getBusLocation: no backend route – returning null data');
-    throw UnsupportedError(
-        'Real-time bus location is not available on this backend.');
+    try {
+      final response = await _dio.get('/transports/location', queryParameters: {'studentId': studentId});
+      if (response.data != null && response.data['data'] != null) {
+        return BusLocationModel.fromJson(response.data['data']);
+      }
+      throw UnsupportedError('Real-time bus location is not available on this backend.');
+    } catch (e) {
+      debugPrint('[API] getBusLocation failed: $e');
+      throw UnsupportedError(
+          'Real-time bus location is not available on this backend.');
+    }
   }
 
   Future<List<LocationHistoryRecord>> getLocationHistory(
       String studentId) async {
-    debugPrint('[API] getLocationHistory: no backend route – returning empty list');
-    return [];
+    try {
+      final response = await _dio.get('/transports/history', queryParameters: {'studentId': studentId});
+      if (response.data != null && response.data['data'] is List) {
+        final List data = response.data['data'];
+        return data.map((record) => LocationHistoryRecord.fromJson(record)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[API] getLocationHistory failed: $e');
+      return [];
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1348,28 +1375,48 @@ class ApiService {
   // ---------------------------------------------------------------------------
 
   Future<Map<String, dynamic>> getBehaviorSummary(String studentId) async {
-    debugPrint('[API] getBehaviorSummary: no backend route – returning empty');
-    return {};
+    try {
+      final response = await _dio.get('/behavior/summary', queryParameters: {'studentId': studentId});
+      return response.data['data'] ?? {};
+    } catch (e) {
+      debugPrint('[API] getBehaviorSummary failed: $e');
+      return {};
+    }
   }
 
   Future<List<Map<String, dynamic>>> getBehaviorHistory(
       String studentId) async {
-    debugPrint('[API] getBehaviorHistory: no backend route – returning empty');
-    return [];
+    try {
+      final response = await _dio.get('/behavior/history', queryParameters: {'studentId': studentId});
+      return List<Map<String, dynamic>>.from(response.data['data'] ?? []);
+    } catch (e) {
+      debugPrint('[API] getBehaviorHistory failed: $e');
+      return [];
+    }
   }
 
   // ---------------------------------------------------------------------------
-  // SECURITY / GEOFENCING  –  no backend route; graceful degradation
+  // SECURITY / GEOFENCING
   // ---------------------------------------------------------------------------
 
   Future<Map<String, dynamic>> getSecurityStatus(String studentId) async {
-    debugPrint('[API] getSecurityStatus: no backend route – returning empty');
-    return {};
+    try {
+      final response = await _dio.get('/security/status', queryParameters: {'studentId': studentId});
+      return response.data['data'] ?? {};
+    } catch (e) {
+      debugPrint('[API] getSecurityStatus failed: $e');
+      return {};
+    }
   }
 
   Future<List<Map<String, dynamic>>> getSecurityAlerts(String studentId) async {
-    debugPrint('[API] getSecurityAlerts: no backend route – returning empty');
-    return [];
+    try {
+      final response = await _dio.get('/security/alerts', queryParameters: {'studentId': studentId});
+      return List<Map<String, dynamic>>.from(response.data['data'] ?? []);
+    } catch (e) {
+      debugPrint('[API] getSecurityAlerts failed: $e');
+      return [];
+    }
   }
 
   // ---------------------------------------------------------------------------

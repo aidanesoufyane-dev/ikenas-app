@@ -60,7 +60,11 @@ class NotificationViewModel extends ChangeNotifier {
       final fetched = await _apiService.getNotifications();
       final prefs = await SharedPreferences.getInstance();
       final deletedIds = prefs.getStringList('deleted_notification_ids') ?? <String>[];
-      _notifications = fetched.where((n) => !deletedIds.contains(n.id)).toList();
+      final updated = fetched.where((n) => !deletedIds.contains(n.id)).toList();
+      final changed = updated.length != _notifications.length ||
+          updated.any((n) => !_notifications.any((old) => old.id == n.id && old.isRead == n.isRead));
+      _notifications = updated;
+      if (changed) notifyListeners();
     } catch (e) {
       if (!silent) _errorMessage = _apiService.getLocalizedErrorMessage(e);
     } finally {
