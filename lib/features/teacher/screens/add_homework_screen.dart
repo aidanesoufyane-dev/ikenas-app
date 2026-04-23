@@ -408,7 +408,7 @@ class _AddHomeworkScreenState extends State<AddHomeworkScreen> {
                     icon: Icon(Icons.keyboard_arrow_down_rounded, color: secondaryTextColor),
                     items: const [],
                     onChanged: null,
-                    hint: Text(AppLocalizations.of(context)!.translate('no_classes_today') ?? 'No classes',
+                    hint: Text(AppLocalizations.of(context)!.translate('no_classes_today'),
                       style: TextStyle(fontSize: 14, color: secondaryTextColor),
                     ),
                   )

@@ -259,9 +259,10 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                                 phone: _phoneController.text,
                                 avatarIndex: _tempAvatarIndex,
                               );
-                              if (mounted && vm.errorMessage == null) {
+                              if (!context.mounted) return;
+                              if (vm.errorMessage == null) {
                                 Navigator.pop(context);
-                              } else if (mounted && vm.errorMessage != null) {
+                              } else if (vm.errorMessage != null) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                       content: Text(vm.errorMessage!),

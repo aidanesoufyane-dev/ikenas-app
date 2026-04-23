@@ -462,7 +462,6 @@ class _ChatTile extends StatelessWidget {
   final String time;
   final int unread;
   final String role;
-  final bool isSpecial;
   final VoidCallback? onTap;
 
   const _ChatTile({
@@ -471,7 +470,6 @@ class _ChatTile extends StatelessWidget {
     required this.time,
     required this.unread,
     required this.role,
-    this.isSpecial = false,
     this.onTap,
   });
 
@@ -509,9 +507,7 @@ class _ChatTile extends StatelessWidget {
               decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                      color: isSpecial
-                          ? Colors.orangeAccent
-                          : Colors.blueAccent.withValues(alpha: 0.2))),
+                      color: Colors.blueAccent.withValues(alpha: 0.2))),
               child: CircleAvatar(
                 radius: 26,
                 backgroundColor: isDark
@@ -564,14 +560,14 @@ class _ChatTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: (isSpecial ? Colors.orangeAccent : Colors.blueAccent)
+                  color: Colors.blueAccent
                       .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   role.toUpperCase(),
-                  style: TextStyle(
-                      color: isSpecial ? Colors.orangeAccent : Colors.blueAccent,
+                  style: const TextStyle(
+                      color: Colors.blueAccent,
                       fontSize: 8,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0.5),

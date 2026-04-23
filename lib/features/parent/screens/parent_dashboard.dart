@@ -245,6 +245,8 @@ class _ParentHomeState extends State<_ParentHome> {
       debugPrint('Error loading cached participation status: $e');
     }
 
+    if (!context.mounted) return;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1818,8 +1820,9 @@ class _ParentHomeState extends State<_ParentHome> {
                           showTitles: true,
                           interval: 1,
                           getTitlesWidget: (value, meta) {
-                            if (value != value.toInt())
+                            if (value != value.toInt()) {
                               return const SizedBox.shrink();
+                            }
                             final avgs = context
                                 .read<DashboardViewModel>()
                                 .subjectAverages;
