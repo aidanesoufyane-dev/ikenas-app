@@ -1678,6 +1678,7 @@ class _SuiviScolaireScreenState extends State<SuiviScolaireScreen> {
               void showDetailSheet() {
                 bool isUploading = false;
                 bool isEditing = !a.isJustified;
+                String? validationError;
 
                 // Try to extract previously selected reason if editing
                 String selectedReason = 'Maladie';
@@ -2244,7 +2245,17 @@ class _SuiviScolaireScreenState extends State<SuiviScolaireScreen> {
                                       ),
                                     ),
 
-                                  const SizedBox(height: 48),
+                                  if (validationError?.isNotEmpty == true)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: Text(
+                                        validationError ?? '',
+                                        style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+
+                                  const SizedBox(height: 8),
 
                                   // Action Buttons
                                   SizedBox(
@@ -2263,34 +2274,17 @@ class _SuiviScolaireScreenState extends State<SuiviScolaireScreen> {
                                                   a.motif != finalReasonString;
 
                                               if (isCreateMode) {
-                                                // Strict Rule 1: CREATE -> Must provide BOTH reason and attachment
-                                                if (selectedFile == null) {
-                                                  ScaffoldMessenger.of(context)
-                                                      .showSnackBar(const SnackBar(
-                                                          content: Text(
-                                                              'Veuillez fournir un fichier de justification (document/image).')));
-                                                  return;
-                                                }
-                                                if (commentController.text
-                                                    .trim()
-                                                    .isEmpty) {
-                                                  ScaffoldMessenger.of(context)
-                                                      .showSnackBar(const SnackBar(
-                                                          content: Text(
-                                                              'Veuillez préciser le motif de l\'absence.')));
+                                                if (commentController.text.trim().isEmpty) {
+                                                  setStateSheet(() => validationError = 'Veuillez préciser le motif de l\'absence.');
                                                   return;
                                                 }
                                               } else {
-                                                // Strict Rule 2: UPDATE -> Must provide AT LEAST ONE change
-                                                if (selectedFile == null &&
-                                                    !isReasonModified) {
-                                                  ScaffoldMessenger.of(context)
-                                                      .showSnackBar(const SnackBar(
-                                                          content: Text(
-                                                              'Veuillez modifier le motif ou joindre un nouveau document.')));
+                                                if (selectedFile == null && !isReasonModified) {
+                                                  setStateSheet(() => validationError = 'Veuillez modifier le motif ou joindre un nouveau document.');
                                                   return;
                                                 }
                                               }
+                                              setStateSheet(() => validationError = null);
                                               setStateSheet(
                                                   () => isUploading = true);
                                               final timer = Stream.periodic(
