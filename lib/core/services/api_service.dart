@@ -352,6 +352,15 @@ class ApiService {
           final raw = _handleResponseData(response);
           if (raw is List && raw.isNotEmpty) {
             final parsed = raw
+                .where((json) {
+                  // Skip entries with no score recorded yet
+                  final j = json as Map;
+                  final hasScore = j['score'] != null ||
+                      j['note'] != null ||
+                      j['mark'] != null ||
+                      j['grade'] != null;
+                  return hasScore;
+                })
                 .map((json) {
                   try {
                     return GradeModel.fromJson(json as Map<String, dynamic>);
