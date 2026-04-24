@@ -186,16 +186,31 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
 
     // Build entries — clamp scores to [0, 10]
     final entries = _currentStudents.map((student) {
-      final scores = <Map<String, dynamic>>[];
-      for (final component in components) {
+      if (_isSingleScore) {
         final raw =
-            _gradeControllers[student.id]?[component]?.text.trim() ?? '';
+            _gradeControllers[student.id]?[_singleScoreLabel]?.text.trim() ?? '';
         final score = double.tryParse(raw);
-        if (score != null) {
-          scores.add({'component': component, 'score': score.clamp(0.0, 10.0)});
-        }
+        return {
+          'student': student.id,
+          'score': score != null ? score.clamp(0.0, 10.0) : null,
+          'components': <Map<String, dynamic>>[],
+        };
+      } else {
+        final componentList = components.map((component) {
+          final raw =
+              _gradeControllers[student.id]?[component]?.text.trim() ?? '';
+          final score = double.tryParse(raw);
+          return {
+            'key': component,
+            'name': component,
+            'score': score?.clamp(0.0, 10.0),
+          };
+        }).toList();
+        return {
+          'student': student.id,
+          'components': componentList,
+        };
       }
-      return {'student': student.id, 'scores': scores};
     }).toList();
 
     String devTitle = 'devoir1';
