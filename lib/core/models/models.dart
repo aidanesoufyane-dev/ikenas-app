@@ -1457,16 +1457,22 @@ class NotificationModel {
     );
   }
 
-  factory NotificationModel.fromJson(Map<String, dynamic> json) {
+  factory NotificationModel.fromJson(Map<String, dynamic> json, {String? currentUserId}) {
+    bool isRead;
+    final readBy = json['readBy'] as List?;
+    if (currentUserId != null && readBy != null) {
+      isRead = readBy.any((id) => id?.toString() == currentUserId);
+    } else {
+      isRead = readBy?.isNotEmpty ?? json['isRead'] ?? false;
+    }
     return NotificationModel(
       id: (json['id'] ?? json['_id'])?.toString() ?? '',
       title: json['title'] ?? '',
       body: json['message'] ?? json['body'] ?? '',
       time: json['createdAt'] ?? json['time'] ?? '',
       type: json['type'] ?? '',
-      iconType:
-          _iconTypeFromString(json['type'] ?? ''), // Use type to infer icon
-      isRead: (json['readBy'] as List?)?.isNotEmpty ?? json['isRead'] ?? false,
+      iconType: _iconTypeFromString(json['type'] ?? ''),
+      isRead: isRead,
       isUrgent: json['isUrgent'] ?? (json['type'] == 'exam_scheduled'),
     );
   }

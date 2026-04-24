@@ -49,6 +49,12 @@ class NotificationViewModel extends ChangeNotifier {
     }
   }
 
+  String? _currentUserId;
+
+  void setCurrentUserId(String? id) {
+    _currentUserId = id;
+  }
+
   Future<void> fetchNotifications({bool silent = false}) async {
     if (!silent) {
       _isLoading = true;
@@ -57,7 +63,7 @@ class NotificationViewModel extends ChangeNotifier {
     }
 
     try {
-      final fetched = await _apiService.getNotifications();
+      final fetched = await _apiService.getNotifications(currentUserId: _currentUserId);
       final prefs = await SharedPreferences.getInstance();
       final deletedIds = prefs.getStringList('deleted_notification_ids') ?? <String>[];
       final updated = fetched.where((n) => !deletedIds.contains(n.id)).toList();

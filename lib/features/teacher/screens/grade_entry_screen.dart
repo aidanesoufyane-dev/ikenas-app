@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../core/models/models.dart';
@@ -43,42 +44,56 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
   // --- Grade controllers: studentId → componentName → TextEditingController ---
   final Map<String, Map<String, TextEditingController>> _gradeControllers = {};
 
-  // Fallback component list per subject name (used when backend has none)
-  final Map<String, List<String>> _defaultComponents = {
+  // Subjects with multiple components — exact names as required
+  static const Map<String, List<String>> _componentSubjects = {
     'Arabe': [
-      'الإستماع والتحدث',
-      'النقل',
-      'الخط',
-      'الإملاء',
       'القراءة',
-      'التعبير الكتابي'
+      'الإملاء',
+      'الإنشاء',
+      'التركيب',
+      'الصرف والتحويل',
+      'فهم المقروء',
     ],
     'Français': [
-      'Lecture',
-      'Conjugaison',
+      'Production écrite',
+      'Lexique',
       'Grammaire',
-      'Orthographe',
-      'Dictée',
-      'Production Écrite',
+      'Conjugaison',
+      'Orthographe/Dictée',
+      'Lecture',
+      'Communication',
+      'Poésie',
     ],
-    'Mathématiques': ['Calcul', 'Géométrie', 'Mesures', 'Résolution de P.'],
-    'Histoire-Géographie': ['Histoire', 'Géographie', 'Education Civique'],
+    'Histoire-Géographie': [
+      'Histoire',
+      'Géographie',
+      'Éducation civique',
+    ],
   };
 
-  List<String> get _currentComponents {
-    final subjectName =
-        _selectedSubjectData?['name']?.toString() ?? '';
-    // Exact match first, then prefix match
-    if (_defaultComponents.containsKey(subjectName)) {
-      return _defaultComponents[subjectName]!;
+  static const String _singleScoreLabel = 'الفرض';
+
+  List<String>? _resolveComponents(String subjectName) {
+    if (_componentSubjects.containsKey(subjectName)) {
+      return _componentSubjects[subjectName]!;
     }
-    for (final key in _defaultComponents.keys) {
+    for (final key in _componentSubjects.keys) {
       if (subjectName.toLowerCase().contains(key.toLowerCase()) ||
           key.toLowerCase().contains(subjectName.toLowerCase())) {
-        return _defaultComponents[key]!;
+        return _componentSubjects[key]!;
       }
     }
-    return ['Note'];
+    return null; // single-score subject
+  }
+
+  bool get _isSingleScore {
+    final name = _selectedSubjectData?['name']?.toString() ?? '';
+    return _resolveComponents(name) == null;
+  }
+
+  List<String> get _currentComponents {
+    final name = _selectedSubjectData?['name']?.toString() ?? '';
+    return _resolveComponents(name) ?? [_singleScoreLabel];
   }
 
   @override
@@ -169,7 +184,7 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
 
     final components = _currentComponents;
 
-    // Build entries in the format the backend expects for /notes/save
+    // Build entries — clamp scores to [0, 10]
     final entries = _currentStudents.map((student) {
       final scores = <Map<String, dynamic>>[];
       for (final component in components) {
@@ -177,7 +192,7 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
             _gradeControllers[student.id]?[component]?.text.trim() ?? '';
         final score = double.tryParse(raw);
         if (score != null) {
-          scores.add({'component': component, 'score': score});
+          scores.add({'component': component, 'score': score.clamp(0.0, 10.0)});
         }
       }
       return {'student': student.id, 'scores': scores};
@@ -188,15 +203,20 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
     if (_selectedAssignment == 'assign_3') devTitle = 'devoir3';
     if (_selectedAssignment == 'assign_exam') devTitle = 'devoir4';
 
+    final subjectId = _selectedSubjectData!['id']?.toString() ??
+        _selectedSubjectData!['_id']?.toString() ?? '';
+
     final payload = {
       'sheet': {
         'classe': _selectedClass!.id,
-        'subject': _selectedSubjectData!['id']?.toString() ??
-            _selectedSubjectData!['_id']?.toString() ??
-            '',
+        'subject': subjectId,
         'semester': _selectedTerm == 'term_1' ? 'S1' : 'S2',
         'type': 'autre',
         'title': devTitle,
+        'maxScore': 10,
+        'components': _isSingleScore
+            ? [{'key': 'score', 'name': _singleScoreLabel}]
+            : components.map((c) => {'key': c, 'name': c}).toList(),
       },
       'results': entries,
     };
@@ -269,7 +289,8 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
                       ),
                     ),
 
-                    // Component chips
+                    // Component chips — only for multi-component subjects
+                    if (!_isSingleScore)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                       child: Wrap(
@@ -277,7 +298,7 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
                         runSpacing: 8,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Text('Composantes Massar:',
+                          Text('Composantes:',
                               style: TextStyle(
                                   color: Colors.blueAccent,
                                   fontWeight: FontWeight.bold,
@@ -372,12 +393,37 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
                                                   fontWeight: FontWeight.bold,
                                                   color: primaryTextColor,
                                                   fontSize: 12))),
-                                          DataCell(Text('—',
-                                              style: TextStyle(
-                                                  color: secondaryTextColor,
-                                                  fontWeight:
-                                                      FontWeight.w900))),
-                                          ...components.map((c) => DataCell(
+                                          // Live average for component subjects
+                                          DataCell(Builder(builder: (_) {
+                                            if (_isSingleScore) {
+                                              return Text('—',
+                                                  style: TextStyle(
+                                                      color: secondaryTextColor,
+                                                      fontWeight: FontWeight.w900));
+                                            }
+                                            double sum = 0; int count = 0;
+                                            for (final c in components) {
+                                              final v = double.tryParse(
+                                                  _gradeControllers[student.id]?[c]?.text.trim() ?? '');
+                                              if (v != null) { sum += v; count++; }
+                                            }
+                                            if (count == 0) {
+                                              return Text('—',
+                                                  style: TextStyle(
+                                                      color: secondaryTextColor,
+                                                      fontWeight: FontWeight.w900));
+                                            }
+                                            return Text(
+                                              (sum / count).toStringAsFixed(2),
+                                              style: const TextStyle(
+                                                  color: Colors.blueAccent,
+                                                  fontWeight: FontWeight.w900,
+                                                  fontSize: 13),
+                                            );
+                                          })),
+                                          ...components.map((c) {
+                                            final ctrl = _gradeControllers[student.id]?[c];
+                                            return DataCell(
                                                 Container(
                                                   width: 60,
                                                   height: 36,
@@ -400,11 +446,21 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
                                                                     alpha: 0.1)),
                                                   ),
                                                   child: TextField(
-                                                    controller: _gradeControllers[
-                                                        student.id]?[c],
+                                                    controller: ctrl,
                                                     textAlign: TextAlign.center,
                                                     keyboardType:
-                                                        TextInputType.number,
+                                                        const TextInputType.numberWithOptions(decimal: true),
+                                                    inputFormatters: [
+                                                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                                                    ],
+                                                    onChanged: (val) {
+                                                      final v = double.tryParse(val);
+                                                      if (v != null && v > 10) {
+                                                        ctrl?.text = '10';
+                                                        ctrl?.selection = const TextSelection.collapsed(offset: 2);
+                                                      }
+                                                      setStateModal(() {});
+                                                    },
                                                     style: TextStyle(
                                                         color: primaryTextColor,
                                                         fontWeight:
@@ -424,7 +480,8 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
                                                     ),
                                                   ),
                                                 ),
-                                              )),
+                                              );
+                                          }),
                                         ],
                                       );
                                     }).toList(),

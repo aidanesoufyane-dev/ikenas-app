@@ -93,7 +93,7 @@ class AppState extends ChangeNotifier {
         ApiService.instance.setToken(session.token);
 
         // Reconnect WebSocket on session restore
-        WebSocketService().initialize(token: session.token, baseUrl: ApiService.instance.baseUrl);
+        WebSocketService().initialize(token: session.token, baseUrl: ApiService.instance.baseUrl, userId: _currentUser!.id);
 
         notifyListeners();
         // Re-register FCM token on session restore (token may have rotated)
@@ -128,7 +128,7 @@ class AppState extends ChangeNotifier {
         ApiService.instance.setToken(token);
 
         // Connect WebSocket for real-time notifications
-        WebSocketService().initialize(token: token, baseUrl: ApiService.instance.baseUrl);
+        WebSocketService().initialize(token: token, baseUrl: ApiService.instance.baseUrl, userId: _currentUser!.id);
 
         // Register FCM device token so backend can send push notifications
         final fcmToken = await NotificationService.instance.getToken();

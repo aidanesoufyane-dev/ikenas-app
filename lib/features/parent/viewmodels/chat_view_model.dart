@@ -173,14 +173,15 @@ class ChatViewModel extends ChangeNotifier {
   }
 
   // ── canReply / replyableMessageId ────────────────────────────
-  /// The backend only allows replies to messages where allowReply == true.
-  /// POST /messages is restricted to admin/teacher/supervisor roles.
-  /// Parents can only use POST /messages/:id/reply.
+  /// Parents can reply to any received (non-own) message in individual threads.
+  /// For group threads, only messages explicitly marked allowReply=true.
   String? get replyableMessageId {
+    final isGroup = _activeThreadType == 'class';
     for (final msg in _activeMessages.reversed) {
-      if (msg.isMe) continue; // can't reply to own messages
+      if (msg.isMe) continue;
       if (msg.id.isEmpty || msg.id.startsWith('temp_')) continue;
-      if (msg.metadata?['allowReply'] == true) return msg.id;
+      // Individual: always replyable. Group: check allowReply flag.
+      if (!isGroup || msg.metadata?['allowReply'] == true) return msg.id;
     }
     return null;
   }

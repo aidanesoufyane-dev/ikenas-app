@@ -22,6 +22,7 @@ class WebSocketService {
 
   io.Socket? _socket;
   bool _isConnected = false;
+  String? _currentUserId;
 
   final _messageStreamController =
       StreamController<ChatMessageModel>.broadcast();
@@ -42,7 +43,8 @@ class WebSocketService {
   // ---------------------------------------------------------------------------
 
   /// Call once after login with the JWT token.
-  void initialize({required String token, required String baseUrl}) {
+  void initialize({required String token, required String baseUrl, String? userId}) {
+    _currentUserId = userId;
     // Derive WS URL from the HTTP base URL (strip /api, swap http→ws)
     final serverRoot = baseUrl
         .replaceAll(RegExp(r'/api/?$'), '')
@@ -88,6 +90,7 @@ class WebSocketService {
       })
       ..on('receive_message', _onReceiveMessage)
       ..on('new_message', _onReceiveMessage)
+      ..on('new-message', _onReceiveMessage)
       ..on('new_notification', _onNotification)
       ..on('notification', _onNotification)
       ..on('typing', (data) {
@@ -169,16 +172,32 @@ class WebSocketService {
     try {
       final Map<String, dynamic> raw = Map<String, dynamic>.from(
           data is Map ? data : {'message': data});
-      final msgData = raw['message'] ?? raw;
-      final chatMessage =
-          ChatMessageModel.fromJson(Map<String, dynamic>.from(msgData as Map));
+      final msgData = Map<String, dynamic>.from((raw['message'] ?? raw) as Map);
+
+      // Extract sender info from nested sender object (backend structure)
+      final senderObj = msgData['sender'];
+      String senderId = '';
+      String senderName = 'Nouveau message';
+      if (senderObj is Map) {
+        senderId = (senderObj['_id'] ?? senderObj['id'])?.toString() ?? '';
+        final first = senderObj['firstName']?.toString() ?? '';
+        final last = senderObj['lastName']?.toString() ?? '';
+        final full = '$first $last'.trim();
+        senderName = full.isNotEmpty
+            ? full
+            : senderObj['name']?.toString() ?? 'Nouveau message';
+      }
+
+      final chatMessage = ChatMessageModel.fromJson(msgData);
       _messageStreamController.add(chatMessage);
       debugPrint('[Socket.io] Message received: ${chatMessage.id}');
 
-      // Show local push notification for incoming messages
+      // Don't notify for own messages (backend echoes the message back to sender)
+      if (_currentUserId != null && senderId == _currentUserId) return;
+
       NotificationService.instance.show(
-        title: 'Nouveau message',
-        body: chatMessage.content.isNotEmpty ? chatMessage.content : '...',
+        title: senderName,
+        body: chatMessage.content.isNotEmpty ? chatMessage.content : '📎 Pièce jointe',
       );
     } catch (e) {
       debugPrint('[Socket.io] Error parsing message: $e');

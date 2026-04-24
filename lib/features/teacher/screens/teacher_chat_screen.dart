@@ -100,6 +100,7 @@ class TeacherChatScreen extends StatefulWidget {
 class _TeacherChatScreenState extends State<TeacherChatScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  Timer? _refreshTimer;
 
   List<_Conversation> _conversations = [];
   List<ClassModel> _classes = [];
@@ -111,15 +112,21 @@ class _TeacherChatScreenState extends State<TeacherChatScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadData();
+    // Refresh conversation list every 10 seconds
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 10),
+      (_) => _loadData(silent: true),
+    );
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadData({bool silent = false}) async {
     try {
       await AuthService.instance.init();
       final user = AuthService.instance.getStoredUser();
@@ -190,7 +197,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen>
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
+      if (!silent) setState(() => _isLoading = false);
     }
   }
 
@@ -1040,21 +1047,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     if (event['event'] == 'new-message') {
       final senderId = _extractId(msg['sender']);
-      final targetId = _extractId(msg['targetUser']);
       final targetClassId = _extractId(msg['targetClass']);
       final isOwn = senderId == _currentUserId;
+
+      // Own messages are already added optimistically in _sendTextMessage
+      if (isOwn) return;
 
       bool relevant = false;
       if (_isClassChat) {
         relevant = targetClassId == widget.classModel!.id;
       } else if (widget.targetUserId != null) {
-        final partnerId = widget.targetUserId!;
-        relevant = (isOwn && targetId == partnerId) ||
-            (!isOwn && senderId == partnerId);
+        relevant = senderId == widget.targetUserId;
       }
 
       if (relevant && mounted) {
-        setState(() => _messages.add(_toLocal(msg, isOwn)));
+        setState(() => _messages.add(_toLocal(msg, false)));
         _scrollToBottom();
       }
     }
@@ -1102,17 +1109,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         _scrollToBottom();
       }
     } catch (_) {
-      // Optimistically add even on failure so the user sees their own message
       if (mounted) {
-        setState(() => _messages.add({
-              'isMe': true,
-              'content': text,
-              'time': DateFormat('HH:mm').format(DateTime.now()),
-              'type': 'text',
-              '_id': '',
-              '_createdAt': DateTime.now().toIso8601String(),
-            }));
-        _scrollToBottom();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Échec de l\'envoi du message. Réessayez.'),
+            backgroundColor: Colors.redAccent,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        _controller.text = text; // restore text so user can retry
       }
     } finally {
       if (mounted) setState(() => _isSending = false);
@@ -1443,7 +1448,19 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 children: [
                   CircleAvatar(
                       radius: 18,
-                      backgroundImage: NetworkImage(widget.avatarUrl)),
+                      backgroundColor: Colors.blueAccent.withValues(alpha: 0.2),
+                      backgroundImage: widget.avatarUrl.isNotEmpty
+                          ? NetworkImage(widget.avatarUrl)
+                          : null,
+                      onBackgroundImageError: widget.avatarUrl.isNotEmpty
+                          ? (_, __) {}
+                          : null,
+                      child: widget.avatarUrl.isEmpty
+                          ? Text(
+                              widget.name.isNotEmpty ? widget.name[0].toUpperCase() : '?',
+                              style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.w900, fontSize: 13),
+                            )
+                          : null),
                   const SizedBox(width: 12),
                   Text(widget.name,
                       style: TextStyle(

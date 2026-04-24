@@ -212,12 +212,14 @@ class _TeacherHomeState extends State<_TeacherHome> {
         ApiService.instance.getHomework('me').catchError((_) => <HomeworkModel>[]),
         ApiService.instance.getExams('me').catchError((_) => <HomeworkModel>[]),
         ApiService.instance.getClasses().catchError((_) => <ClassModel>[]),
+        ApiService.instance.getTodayAbsentCount().catchError((_) => 0),
       ]);
 
       final classes = results[0] as List<ClassModel>;
       final homework = results[1] as List<HomeworkModel>;
       final exams = results[2] as List<HomeworkModel>;
       final allClasses = results[3] as List<ClassModel>;
+      final absentToday = results[4] as int;
 
       // Encomapss myClasses with accurate student counts from allClasses
       // because getMyClasses originally strips off studentCount property
@@ -246,8 +248,8 @@ class _TeacherHomeState extends State<_TeacherHome> {
           _stats = {
             'totalStudents': totalStudents,
             'students': totalStudents,
-            'absentToday': '--',        // requires per-class attendance query
-            'absent': '--',
+            'absentToday': absentToday,
+            'absent': absentToday,
             'pendingCorrections': pendingCorrections,
             'pendingAssignments': pendingCorrections,
             'newHomework': newHomework,

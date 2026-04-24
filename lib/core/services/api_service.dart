@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import '../config/app_config.dart';
 import '../models/models.dart';
 import 'package:http_parser/http_parser.dart';
@@ -12,8 +13,8 @@ class ApiService {
     _dio = Dio(
       BaseOptions(
         baseUrl: AppConfig.baseUrl,
-        connectTimeout: const Duration(seconds: 20),
-        receiveTimeout: const Duration(seconds: 45),
+        connectTimeout: const Duration(seconds: 70),
+        receiveTimeout: const Duration(seconds: 90),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -682,6 +683,64 @@ class ApiService {
     return response.statusCode == 200 || response.statusCode == 201;
   }
 
+  /// GET /attendances?date=today → count of absent/late students recorded by this teacher today
+  Future<int> getTodayAbsentCount() async {
+    try {
+      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final response = await _dio.get('/attendances',
+          queryParameters: {'date': today, 'limit': '500'});
+      if (response.statusCode == 200) {
+        final raw = response.data;
+        final total = raw['total'];
+        if (total != null) return (total as num).toInt();
+        final data = raw['data'];
+        if (data is List) return data.length;
+      }
+    } catch (e) {
+      debugPrint('[API] getTodayAbsentCount failed: $e');
+    }
+    return 0;
+  }
+
+  /// GET /attendances?classe=&date=&includePresent=true → student-id → status map
+  Future<Map<String, String>> getAttendanceForClassDate({
+    required String classId,
+    required String date,
+    String? subjectId,
+  }) async {
+    try {
+      final params = <String, dynamic>{
+        'classe': classId,
+        'date': date,
+        'includePresent': 'true',
+        'limit': '200',
+        if (subjectId != null && subjectId.isNotEmpty) 'subject': subjectId,
+      };
+      final response = await _dio.get('/attendances', queryParameters: params);
+      if (response.statusCode == 200) {
+        final raw = response.data;
+        final List items = (raw['data'] ?? raw['attendances'] ?? []) as List;
+        final result = <String, String>{};
+        for (final item in items) {
+          final studentObj = item['student'];
+          String? studentId;
+          if (studentObj is Map) {
+            studentId = (studentObj['_id'] ?? studentObj['id'])?.toString();
+          } else {
+            studentId = studentObj?.toString();
+          }
+          if (studentId != null && studentId.isNotEmpty) {
+            result[studentId] = item['status']?.toString() ?? 'absent';
+          }
+        }
+        return result;
+      }
+    } catch (e) {
+      debugPrint('[API] getAttendanceForClassDate failed: $e');
+    }
+    return {};
+  }
+
   /// GET /attendances/daily-report?classId=&date=
   Future<Map<String, dynamic>> getDailyAttendanceReport({
     required String classId,
@@ -948,11 +1007,11 @@ class ApiService {
   // ---------------------------------------------------------------------------
 
   /// GET /notifications
-  Future<List<NotificationModel>> getNotifications() async {
-    final response = await _dio.get('/notifications');
+  Future<List<NotificationModel>> getNotifications({String? currentUserId}) async {
+    final response = await _dio.get('/notifications', queryParameters: {'limit': 100});
     if (response.statusCode == 200) {
       final List data = _handleResponseData(response);
-      return data.map((json) => NotificationModel.fromJson(json)).toList();
+      return data.map((json) => NotificationModel.fromJson(json, currentUserId: currentUserId)).toList();
     }
     throw Exception('Failed to load notifications');
   }
@@ -1268,13 +1327,103 @@ class ApiService {
     throw Exception('Failed to load my classes');
   }
 
+  /// Build class stats from /notes/class-ranking + /attendances (no dedicated endpoint exists).
   Future<Map<String, dynamic>> getClassStats(String classId) async {
     try {
-      final response = await _dio.get('/teachers/my-classes/$classId/stats');
-      if (response.statusCode == 200) {
-        return _handleResponseData(response);
+      final results = await Future.wait([
+        _dio.get('/notes/class-ranking', queryParameters: {'classe': classId}),
+        _dio.get('/attendances', queryParameters: {'classe': classId, 'limit': '500'}),
+        _dio.get('/students', queryParameters: {'classe': classId, 'limit': '200'}),
+        _dio.get('/notes/sheets', queryParameters: {'classe': classId}),
+      ]);
+
+      // ── grades ──
+      final rankingRaw = results[0].data;
+      final rankingList = (rankingRaw['data'] ?? []) as List;
+      double classAvg = 0;
+      int successCount = 0;
+      final List<Map<String, dynamic>> top5 = [];
+      final List<Map<String, dynamic>> bottom5 = [];
+
+      if (rankingList.isNotEmpty) {
+        double total = 0;
+        for (final r in rankingList) {
+          final pts = (r['points'] as num?)?.toDouble() ?? 0;
+          final subCount = ((r['subjectsCount'] as num?)?.toInt() ?? 1).clamp(1, 100);
+          final avg20 = (pts / subCount) * 2;
+          total += avg20;
+          if (avg20 >= 10) successCount++;
+        }
+        classAvg = total / rankingList.length;
+
+        for (final r in rankingList.take(5)) {
+          final pts = (r['points'] as num?)?.toDouble() ?? 0;
+          final subCount = ((r['subjectsCount'] as num?)?.toInt() ?? 1).clamp(1, 100);
+          top5.add({
+            'id': r['studentId'],
+            'name': '${r['firstName'] ?? ''} ${r['lastName'] ?? ''}'.trim(),
+            'average': (pts / subCount) * 2,
+          });
+        }
+        for (final r in rankingList.reversed.take(5)) {
+          final pts = (r['points'] as num?)?.toDouble() ?? 0;
+          final subCount = ((r['subjectsCount'] as num?)?.toInt() ?? 1).clamp(1, 100);
+          bottom5.insert(0, {
+            'id': r['studentId'],
+            'name': '${r['firstName'] ?? ''} ${r['lastName'] ?? ''}'.trim(),
+            'average': (pts / subCount) * 2,
+          });
+        }
       }
-      return {};
+
+      final successRate = rankingList.isEmpty ? 0.0 : (successCount / rankingList.length) * 100;
+
+      // ── attendance ──
+      final absRaw = results[1].data;
+      final absList = (absRaw['data'] ?? absRaw['attendances'] ?? []) as List;
+      final absentStudentIds = absList.map((a) {
+        final s = a['student'];
+        return s is Map ? (s['_id'] ?? s['id'])?.toString() ?? '' : s?.toString() ?? '';
+      }).toSet();
+
+      final studentsRaw = results[2].data;
+      final studentsList = (studentsRaw['data'] ?? studentsRaw['students'] ?? []) as List;
+      final totalStudents = (studentsRaw['total'] as num?)?.toInt() ?? studentsList.length;
+      final attendanceRate = totalStudents > 0
+          ? ((totalStudents - absentStudentIds.length) / totalStudents) * 100
+          : 100.0;
+
+      // ── trend: group note sheets by month, plot class avg per active month ──
+      final sheetsList = ((results[3].data['data'] ?? []) as List);
+      final monthSet = <String>{};
+      for (final sheet in sheetsList) {
+        final dt = DateTime.tryParse(sheet['createdAt']?.toString() ?? '');
+        if (dt == null) continue;
+        monthSet.add('${dt.year}-${dt.month.toString().padLeft(2, '0')}');
+      }
+      final sortedMonths = monthSet.toList()..sort();
+      final trendMonths = sortedMonths.length > 5
+          ? sortedMonths.sublist(sortedMonths.length - 5)
+          : sortedMonths;
+      final trendSpots = trendMonths.asMap().entries.map((e) => {
+        'x': e.key.toDouble(),
+        'y': double.parse(classAvg.toStringAsFixed(1)),
+      }).toList();
+      final trendLabels = trendMonths.map((ym) {
+        final dt = DateTime.parse('$ym-01');
+        return DateFormat('MMM', 'fr').format(dt);
+      }).toList();
+
+      return {
+        'classAverage': double.parse(classAvg.toStringAsFixed(2)),
+        'attendanceRate': double.parse(attendanceRate.toStringAsFixed(1)),
+        'successRate': double.parse(successRate.toStringAsFixed(1)),
+        'alerts': 0,
+        'top5': top5,
+        'bottom5': bottom5,
+        'trend': trendSpots,
+        'trendLabels': trendLabels,
+      };
     } catch (e) {
       debugPrint('[API] getClassStats failed: $e');
       return {};

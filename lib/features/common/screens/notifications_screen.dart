@@ -26,6 +26,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final notifVM = context.read<NotificationViewModel>();
+      final userId = context.read<AppState>().currentUser?.id;
+      notifVM.setCurrentUserId(userId);
       notifVM.startPolling();
       notifVM.fetchNotifications();
     });

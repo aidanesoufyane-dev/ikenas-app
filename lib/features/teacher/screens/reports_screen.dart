@@ -166,6 +166,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final primaryTextColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final secondaryTextColor = isDark ? Colors.white38 : Colors.black26;
 
+    // Build trend spots
+    final rawTrend = statsData['trend'];
+    final trendLabels = (statsData['trendLabels'] as List?)?.cast<String>() ?? [];
+    List<FlSpot> trendSpots = [];
+    if (rawTrend is List && rawTrend.isNotEmpty) {
+      trendSpots = rawTrend.map((e) {
+        final m = e as Map;
+        return FlSpot(
+          (_safeDouble(m['x']) ?? 0),
+          (_safeDouble(m['y']) ?? 0),
+        );
+      }).toList();
+    }
+    if (trendSpots.isEmpty) trendSpots = [FlSpot(0, 0)];
+
     final classAvg = _safeDouble(statsData['classAverage']) ?? selectedClass.classAverage;
     final attRate = _safeDouble(statsData['attendanceRate']);
     final attRateText = attRate != null ? '${attRate.toStringAsFixed(0)}%' : '--%';
@@ -347,6 +362,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         color: secondaryTextColor,
                         letterSpacing: 1.5)),
                 const SizedBox(height: 20),
+                if (trendSpots.length < 2)
+                  Container(
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.white,
+                      borderRadius: BorderRadius.circular(36),
+                      border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white),
+                    ),
+                    child: Center(
+                      child: Text(
+                        AppLocalizations.of(context)!.translate('not_enough_data'),
+                        style: TextStyle(color: secondaryTextColor, fontWeight: FontWeight.w900, fontSize: 13),
+                      ),
+                    ),
+                  )
+                else
                 Container(
                   height: 260,
                   padding: const EdgeInsets.fromLTRB(16, 32, 24, 24),
@@ -369,6 +400,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                   child: LineChart(
                     LineChartData(
+                      minY: 0,
+                      maxY: 20,
+                      minX: 0,
+                      maxX: (trendSpots.length - 1).toDouble().clamp(0, 4),
                       gridData: FlGridData(
                         show: true,
                         drawVerticalLine: false,
@@ -389,21 +424,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             showTitles: true,
                             reservedSize: 30,
                             getTitlesWidget: (val, meta) {
-                              final months = [
-                                AppLocalizations.of(context)!
-                                    .translate('month_jan'),
-                                AppLocalizations.of(context)!
-                                    .translate('month_feb'),
-                                AppLocalizations.of(context)!
-                                    .translate('month_mar'),
-                                AppLocalizations.of(context)!
-                                    .translate('month_apr'),
-                                AppLocalizations.of(context)!
-                                    .translate('month_may')
-                              ];
+                              final idx = val.toInt();
+                              final label = idx >= 0 && idx < trendLabels.length
+                                  ? trendLabels[idx]
+                                  : '';
                               return Padding(
                                 padding: const EdgeInsets.only(top: 12.0),
-                                child: Text(months[val.toInt()],
+                                child: Text(label,
                                     style: TextStyle(
                                         color: secondaryTextColor,
                                         fontSize: 10,
@@ -429,7 +456,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       borderData: FlBorderData(show: false),
                       lineBarsData: [
                         LineChartBarData(
-                          spots: const [FlSpot(0, 0)],
+                          spots: trendSpots,
                           isCurved: true,
                           gradient: const LinearGradient(
                               colors: [Colors.blueAccent, Colors.cyanAccent]),
@@ -454,7 +481,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   end: Alignment.bottomCenter)),
                         ),
                         LineChartBarData(
-                          spots: const [FlSpot(0, 0)],
+                          spots: trendSpots,
                           isCurved: true,
                           color: Colors.white24,
                           barWidth: 2,

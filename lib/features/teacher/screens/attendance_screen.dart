@@ -95,20 +95,45 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         _currentStudents = students;
         _isLoadingStudents = false;
       });
-      _initStatus();
+      await _initStatus();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoadingStudents = false);
-      // Optional: show error toast here
     }
   }
 
-  void _initStatus() {
+  Future<void> _initStatus() async {
     _studentStatus.clear();
     for (var student in _currentStudents) {
       _studentStatus[student.id] = 'present';
     }
     if (mounted) setState(() {});
+    await _loadExistingAttendance();
+  }
+
+  Future<void> _loadExistingAttendance() async {
+    if (_selectedClass == null || _currentStudents.isEmpty) return;
+    try {
+      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      final subjectId = _selectedSubjectData?['id']?.toString() ??
+          _selectedSubjectData?['_id']?.toString() ??
+          '';
+      final existing = await ApiService.instance.getAttendanceForClassDate(
+        classId: _selectedClass!.id,
+        date: dateStr,
+        subjectId: subjectId.isNotEmpty ? subjectId : null,
+      );
+      if (!mounted || existing.isEmpty) return;
+      setState(() {
+        for (final entry in existing.entries) {
+          if (_studentStatus.containsKey(entry.key)) {
+            _studentStatus[entry.key] = entry.value;
+          }
+        }
+      });
+    } catch (e) {
+      debugPrint('[AttendanceScreen] loadExistingAttendance error: $e');
+    }
   }
 
   int get _absentCount =>
@@ -134,7 +159,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           .map((e) => {'student': e.key, 'status': e.value})
           .toList();
 
-      await ApiService.instance.bulkMarkAttendance(
+      final saved = await ApiService.instance.bulkMarkAttendance(
         date: dateStr,
         classeId: _selectedClass!.id,
         subjectId: _selectedSubjectData?['id']?.toString() ??
@@ -142,6 +167,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             '',
         absences: absences,
       );
+      if (!saved) throw Exception('Sauvegarde échouée');
 
       if (!mounted) return;
       final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -205,6 +231,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
     if (picked != null && picked != _selectedDate) {
       setState(() => _selectedDate = picked);
+      await _loadExistingAttendance();
     }
   }
 
@@ -381,8 +408,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                                   s['name']?.toString() ?? ''),
                                             ))
                                         .toList(),
-                                    onChanged: (s) => setState(
-                                        () => _selectedSubjectData = s),
+                                    onChanged: (s) {
+                                      setState(() => _selectedSubjectData = s);
+                                      _loadExistingAttendance();
+                                    },
                                   ),
                                 ),
                               ),
