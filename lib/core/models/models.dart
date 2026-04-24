@@ -229,18 +229,6 @@ class GradeModel {
   }
 
   factory GradeModel.fromJson(Map<String, dynamic> json) {
-    // Flatten nested exam object (from /exams/my-results) into top-level fields
-    if (json['exam'] is Map) {
-      final exam = json['exam'] as Map;
-      json = Map<String, dynamic>.from(json);
-      json['title'] ??= exam['title'];
-      json['type'] ??= exam['type'];
-      json['subject'] ??= exam['subject'];
-      json['classe'] ??= exam['classe'];
-      json['date'] ??= exam['date'] ?? exam['createdAt'];
-      json['maxScore'] ??= exam['maxScore'];
-    }
-
     // Extract subject name from various possible structures
     String subjectName = '';
     if (json['subject'] is Map) {
@@ -320,7 +308,7 @@ class GradeModel {
       subject: subjectName,
       grade: gradeValue,
       maxGrade:
-          (json['maxGrade'] ?? json['maxScore'] ?? json['total'] ?? json['outOf'] ?? 10 as num)
+          (json['maxGrade'] ?? json['total'] ?? json['outOf'] ?? 10 as num)
               .toDouble(),
       coefficient: (json['coefficient'] as num?)?.toDouble() ?? 1.0,
       date: rawDate,
