@@ -88,21 +88,14 @@ class _ChatScreenState extends State<ChatScreen> {
         _isConnected = _chatService?.isConnected ?? false;
       });
 
+      ChatMessage? chatMsg;
       if (message is Map<String, dynamic>) {
-        final chatMsg = ChatMessage.fromJson(message, isOwn: message['senderId'] == _userId);
-        setState(() {
-          _messages.add(chatMsg);
-        });
+        chatMsg = ChatMessage.fromJson(message, isOwn: message['senderId'] == _userId);
       } else if (message is Map) {
-        // Cast to Map<String, dynamic>
         final jsonMap = Map<String, dynamic>.from(message);
-        final chatMsg = ChatMessage.fromJson(jsonMap, isOwn: jsonMap['senderId'] == _userId);
-        setState(() {
-          _messages.add(chatMsg);
-        });
+        chatMsg = ChatMessage.fromJson(jsonMap, isOwn: jsonMap['senderId'] == _userId);
       } else if (message is String) {
-        // Fallback for string messages
-        final chatMsg = ChatMessage(
+        chatMsg = ChatMessage(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           senderId: 'system',
           senderName: 'System',
@@ -110,8 +103,11 @@ class _ChatScreenState extends State<ChatScreen> {
           content: message,
           timestamp: DateTime.now(),
         );
+      }
+      if (chatMsg != null) {
         setState(() {
-          _messages.add(chatMsg);
+          _messages.add(chatMsg!);
+          _messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
         });
       }
     } catch (e) {
@@ -127,6 +123,7 @@ class _ChatScreenState extends State<ChatScreen> {
       for (final msg in history) {
         messages.add(ChatMessage.fromJson(msg, isOwn: msg['senderId'] == _userId));
       }
+      messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
       setState(() {
         _messages.clear();
         _messages.addAll(messages);

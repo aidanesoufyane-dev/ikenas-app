@@ -43,9 +43,11 @@ class ChatMessage {
       senderAvatar: json['senderAvatar']?.toString() ?? json['sender_avatar']?.toString() ?? '',
       content: json['content']?.toString() ?? '',
       type: json['type']?.toString() ?? json['messageType']?.toString() ?? 'text',
-      timestamp: json['timestamp'] != null
-          ? DateTime.tryParse(json['timestamp'].toString()) ?? DateTime.now()
-          : DateTime.now(),
+      timestamp: () {
+        final raw = json['timestamp'] ?? json['createdAt'] ?? json['created_at'] ?? json['sentAt'];
+        if (raw == null) return DateTime.now();
+        return DateTime.tryParse(raw.toString()) ?? DateTime.now();
+      }(),
       isOwn: isOwn,
       reactions: reactions,
       isEdited: json['isEdited'] as bool? ?? false,

@@ -153,15 +153,17 @@ class ChatViewModel extends ChangeNotifier {
       // The backend filter does NOT return messages sent BY the parent
       // (their replies have targetUser=teacher, not targetUser=parent).
       // On silent refresh, preserve locally-sent messages so they don't vanish.
+      int byDate(ChatMessageModel a, ChatMessageModel b) =>
+          (a.createdAt ?? DateTime(0)).compareTo(b.createdAt ?? DateTime(0));
+
       if (silent) {
         final serverIds = freshFromServer.map((m) => m.id).toSet();
         final localOnly = _activeMessages
             .where((m) => m.isMe && !serverIds.contains(m.id))
             .toList();
-        _activeMessages = [...freshFromServer, ...localOnly]
-          ..sort((a, b) => a.time.compareTo(b.time));
+        _activeMessages = [...freshFromServer, ...localOnly]..sort(byDate);
       } else {
-        _activeMessages = freshFromServer;
+        _activeMessages = freshFromServer..sort(byDate);
       }
     } catch (e) {
       if (!silent) _errorMessage = e.toString();
