@@ -63,6 +63,45 @@ class ChatApiService {
   }
 
   // ---------------------------------------------------------------------------
+  // POST /messages  — send a new message with file attachment (teacher)
+  // ---------------------------------------------------------------------------
+  Future<Map<String, dynamic>> sendMessageWithAttachment({
+    required String recipientType,
+    String? targetUserId,
+    String? targetClassId,
+    String content = '',
+    required String filePath,
+    required String fileName,
+    required String mimeType,
+    bool allowReply = true,
+  }) async {
+    final formData = FormData.fromMap({
+      'content': content,
+      'recipientType': recipientType,
+      'allowReply': allowReply,
+      if (targetUserId != null) 'targetUser': targetUserId,
+      if (targetClassId != null) 'targetClass': targetClassId,
+      'attachments': await MultipartFile.fromFile(
+        filePath,
+        filename: fileName,
+        contentType: MediaType.parse(mimeType),
+      ),
+    });
+    final response = await _dio.post(
+      '/messages',
+      data: formData,
+      options: Options(contentType: 'multipart/form-data'),
+    );
+    final raw = response.data;
+    final List data = (raw is Map ? raw['data'] : [raw]) ?? [];
+    return data.isNotEmpty
+        ? (data.first is Map<String, dynamic>
+            ? data.first as Map<String, dynamic>
+            : Map<String, dynamic>.from(data.first as Map))
+        : {};
+  }
+
+  // ---------------------------------------------------------------------------
   // POST /messages/:id/reply  — with file attachment
   // ---------------------------------------------------------------------------
   Future<Map<String, dynamic>> replyWithAttachment({
@@ -74,7 +113,7 @@ class ChatApiService {
   }) async {
     final formData = FormData.fromMap({
       'content': content,
-      'attachment': await MultipartFile.fromFile(
+      'attachments': await MultipartFile.fromFile(
         filePath,
         filename: fileName,
         contentType: MediaType.parse(mimeType),

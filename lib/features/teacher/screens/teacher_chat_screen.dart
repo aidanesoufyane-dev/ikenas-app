@@ -4,6 +4,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
+import 'package:record/record.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/providers/app_state.dart';
 import '../../../core/widgets/deep_space_background.dart';
@@ -14,6 +19,7 @@ import '../../../core/config/app_config.dart';
 import '../../../core/models/models.dart';
 import '../../chat/chat_api_service.dart';
 import '../../chat/chat_service.dart';
+import '../../chat/widgets/audio_message_player.dart';
 import 'group_info_screen.dart';
 
 // ─────────────────────────────────────────────────────────────
@@ -926,6 +932,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   bool _isRecording = false;
   int _recordingSeconds = 0;
   Timer? _recordingTimer;
+  final AudioRecorder _recorder = AudioRecorder();
+  String? _pendingFilePath;
+  String? _pendingFileName;
+  String? _pendingMimeType;
+  String? _pendingType;
   final Set<int> _selectedIndices = {};
 
   // Messages stored as [{isMe, content, time, type, _id?}]
@@ -1026,13 +1037,41 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Map<String, dynamic> _toLocal(Map<String, dynamic> msg, bool isOwn) {
+    final serverRoot = AppConfig.serverUrl;
+    final List<String> attachUrls = [];
+    String inferredType = 'text';
+    if (msg['attachments'] is List) {
+      for (final a in msg['attachments'] as List) {
+        String url = '';
+        String mime = '';
+        if (a is Map) {
+          url = (a['url'] ?? a['path'] ?? '').toString();
+          mime = (a['mimetype'] ?? a['mimeType'] ?? '').toString();
+        } else if (a is String) {
+          url = a;
+        }
+        if (url.startsWith('/')) url = '$serverRoot$url';
+        if (url.isNotEmpty) attachUrls.add(url);
+        if (inferredType == 'text' && mime.isNotEmpty) {
+          if (mime.startsWith('image/')) inferredType = 'image';
+          else if (mime.startsWith('audio/') || mime.startsWith('video/')) inferredType = 'voice';
+          else inferredType = 'document';
+        }
+      }
+      if (inferredType == 'text' && attachUrls.isNotEmpty) {
+        final ext = attachUrls.first.split('.').last.toLowerCase().split('?').first;
+        if (['jpg','jpeg','png','gif','webp'].contains(ext)) inferredType = 'image';
+        else if (['m4a','aac','mp3','wav','ogg','opus'].contains(ext)) inferredType = 'voice';
+        else if (attachUrls.isNotEmpty) inferredType = 'document';
+      }
+    }
     return {
       'isMe': isOwn,
       'content': msg['content']?.toString() ?? '',
       'time': DateFormat('HH:mm').format(
-          DateTime.tryParse(msg['createdAt']?.toString() ?? '') ??
-              DateTime.now()),
-      'type': 'text',
+          DateTime.tryParse(msg['createdAt']?.toString() ?? '') ?? DateTime.now()),
+      'type': inferredType,
+      'attachments': attachUrls,
       '_id': (msg['_id'] ?? msg['id'])?.toString() ?? '',
       '_createdAt': msg['createdAt'],
     };
@@ -1138,24 +1177,134 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _controller.dispose();
     _scrollController.dispose();
     _recordingTimer?.cancel();
+    _recorder.dispose();
     _socketSub?.cancel();
     _chatService?.disconnect();
     super.dispose();
   }
 
-  void _startRecordingTimer() {
+  Future<void> _startRecording() async {
+    final micOk = await Permission.microphone.request();
+    if (!micOk.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Microphone permission required')),
+        );
+      }
+      return;
+    }
+    final dir = await getTemporaryDirectory();
+    final path = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
     setState(() {
-      _recordingSeconds = 0;
       _isRecording = true;
+      _recordingSeconds = 0;
     });
-    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() => _recordingSeconds++);
     });
   }
 
-  void _stopRecordingTimer() {
+  Future<void> _stopRecording() async {
     _recordingTimer?.cancel();
-    if (mounted) setState(() => _isRecording = false);
+    final path = await _recorder.stop();
+    setState(() => _isRecording = false);
+    if (path == null) return;
+    setState(() {
+      _pendingFilePath = path;
+      _pendingFileName = path.split('/').last;
+      _pendingMimeType = 'audio/aac';
+      _pendingType = 'voice';
+    });
+    await _sendPendingAttachment();
+  }
+
+  Future<void> _pickImage() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (picked == null) return;
+    setState(() {
+      _pendingFilePath = picked.path;
+      _pendingFileName = picked.name;
+      _pendingMimeType = 'image/jpeg';
+      _pendingType = 'image';
+    });
+  }
+
+  Future<void> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.any, allowMultiple: false);
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.first;
+    if (file.path == null) return;
+    setState(() {
+      _pendingFilePath = file.path;
+      _pendingFileName = file.name;
+      _pendingMimeType = 'application/octet-stream';
+      _pendingType = 'document';
+    });
+  }
+
+  void _clearPending() {
+    setState(() {
+      _pendingFilePath = null;
+      _pendingFileName = null;
+      _pendingMimeType = null;
+      _pendingType = null;
+    });
+  }
+
+  Future<void> _sendPendingAttachment() async {
+    final path = _pendingFilePath;
+    final name = _pendingFileName;
+    final mime = _pendingMimeType;
+    final type = _pendingType;
+    if (path == null || name == null || mime == null || type == null) return;
+    if (_chatApi == null) return;
+    _clearPending();
+
+    setState(() => _isSending = true);
+    try {
+      final sent = await _chatApi!.sendMessageWithAttachment(
+        recipientType: _isClassChat ? 'class' : 'individual',
+        targetClassId: _isClassChat ? widget.classModel!.id : null,
+        targetUserId: _isClassChat ? null : widget.targetUserId,
+        content: _controller.text.trim(),
+        filePath: path,
+        fileName: name,
+        mimeType: mime,
+      );
+      _controller.clear();
+      if (mounted && sent.isNotEmpty) {
+        final serverRoot = AppConfig.serverUrl;
+        final createdAt = sent['createdAt']?.toString() ?? DateTime.now().toIso8601String();
+        final rawAttachments = sent['attachments'];
+        final List<String> attachUrls = [];
+        if (rawAttachments is List) {
+          for (final a in rawAttachments) {
+            String url = (a is Map ? a['url']?.toString() : a?.toString()) ?? '';
+            if (url.startsWith('/')) url = '$serverRoot$url';
+            if (url.isNotEmpty) attachUrls.add(url);
+          }
+        }
+        setState(() => _messages.add({
+          'isMe': true,
+          'content': _controller.text.trim(),
+          'time': DateFormat('HH:mm').format(DateTime.tryParse(createdAt) ?? DateTime.now()),
+          'type': type,
+          'attachments': attachUrls.isNotEmpty ? attachUrls : [path],
+          '_id': (sent['_id'] ?? sent['id'])?.toString() ?? '',
+          '_createdAt': createdAt,
+        }));
+        _scrollToBottom();
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Échec de l\'envoi. Réessayez.'), backgroundColor: Colors.redAccent),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
   }
 
   String _formatDuration(int seconds) {
@@ -1344,20 +1493,32 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               crossAxisSpacing: 10,
               children: [
                 _buildAttachmentIcon(Icons.photo_library_rounded,
-                    loc.translate('camera_roll'), Colors.purpleAccent,
-                    () => Navigator.pop(context)),
+                    loc.translate('camera_roll'), Colors.purpleAccent, () async {
+                  Navigator.pop(context);
+                  await _pickImage();
+                }),
                 _buildAttachmentIcon(Icons.camera_alt_rounded,
-                    loc.translate('selfie'), Colors.blueAccent,
-                    () => Navigator.pop(context)),
-                _buildAttachmentIcon(Icons.video_collection_rounded,
-                    loc.translate('video_label'), Colors.orangeAccent,
-                    () => Navigator.pop(context)),
+                    loc.translate('selfie'), Colors.blueAccent, () async {
+                  Navigator.pop(context);
+                  final picked = await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 80);
+                  if (picked == null) return;
+                  setState(() {
+                    _pendingFilePath = picked.path;
+                    _pendingFileName = picked.name;
+                    _pendingMimeType = 'image/jpeg';
+                    _pendingType = 'image';
+                  });
+                }),
                 _buildAttachmentIcon(Icons.picture_as_pdf_rounded,
-                    loc.translate('pdf_label'), Colors.redAccent,
-                    () => Navigator.pop(context)),
-                _buildAttachmentIcon(Icons.mic_rounded,
-                    loc.translate('audio_recording'), Colors.greenAccent,
-                    () => Navigator.pop(context)),
+                    loc.translate('pdf_label'), Colors.redAccent, () async {
+                  Navigator.pop(context);
+                  await _pickFile();
+                }),
+                _buildAttachmentIcon(Icons.attach_file_rounded,
+                    'Fichier', Colors.orangeAccent, () async {
+                  Navigator.pop(context);
+                  await _pickFile();
+                }),
               ],
             ),
             const SizedBox(height: 32),
@@ -1633,40 +1794,54 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               crossAxisAlignment:
                   isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
-                if (type == 'text')
+                if (type == 'voice' || type == 'audio') ...[
+                  AudioMessagePlayer(
+                    url: () {
+                      final atts = msg['attachments'];
+                      if (atts is List && atts.isNotEmpty) return atts.first.toString();
+                      return '';
+                    }(),
+                    isMe: isMe,
+                  ),
+                ] else if (type == 'image') ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      () {
+                        final atts = msg['attachments'];
+                        if (atts is List && atts.isNotEmpty) return atts.first.toString();
+                        return '';
+                      }(),
+                      width: 200,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+                    ),
+                  ),
+                ] else if (type == 'document') ...[
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.description, color: isMe ? Colors.white : Colors.blueAccent),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          msg['content']?.toString().isNotEmpty == true
+                              ? msg['content'].toString()
+                              : (msg['attachments'] is List && (msg['attachments'] as List).isNotEmpty
+                                  ? (msg['attachments'] as List).first.toString().split('/').last
+                                  : 'Document'),
+                          style: TextStyle(color: isMe || isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else ...[
                   Text(msg['content']?.toString() ?? '',
                       style: TextStyle(
                           color: isMe || isDark ? Colors.white : Colors.black87,
                           fontWeight: FontWeight.w600)),
-                if (type == 'audio')
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.play_circle_filled_rounded,
-                          color:
-                              isMe || isDark ? Colors.white : Colors.blueAccent,
-                          size: 32),
-                      const SizedBox(width: 12),
-                      Container(
-                        width: 100,
-                        height: 3,
-                        decoration: BoxDecoration(
-                            color: (isMe || isDark
-                                    ? Colors.white
-                                    : Colors.blueAccent)
-                                .withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(2)),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(msg['duration']?.toString() ?? '0:00',
-                          style: TextStyle(
-                              color: isMe || isDark
-                                  ? Colors.white70
-                                  : Colors.black45,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold)),
-                    ],
-                  ),
+                ],
                 const SizedBox(height: 4),
                 Text(msg['time']?.toString() ?? '',
                     style: TextStyle(
@@ -1737,40 +1912,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            if (_controller.text.isEmpty)
-              GestureDetector(
-                onLongPressStart:
-                    isAdminOnly ? null : (_) => _startRecordingTimer(),
-                onLongPressEnd: isAdminOnly
-                    ? null
-                    : (_) {
-                        _stopRecordingTimer();
-                      },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: EdgeInsets.all(_isRecording ? 16 : 12),
-                  decoration: BoxDecoration(
-                    color: _isRecording
-                        ? Colors.redAccent
-                        : Colors.blueAccent.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                    boxShadow: _isRecording
-                        ? [
-                            BoxShadow(
-                                color: Colors.redAccent.withValues(alpha: 0.3),
-                                blurRadius: 15,
-                                spreadRadius: 5)
-                          ]
-                        : [],
-                  ),
-                  child: Icon(Icons.mic_rounded,
-                      color: isAdminOnly
-                          ? Colors.grey
-                          : (_isRecording ? Colors.white : Colors.blueAccent),
-                      size: _isRecording ? 28 : 24),
-                ),
+            if (_isRecording)
+              IconButton(
+                onPressed: _stopRecording,
+                icon: const Icon(Icons.stop_circle_rounded, color: Colors.redAccent, size: 28),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               )
-            else
+            else if (_pendingFilePath != null || _controller.text.isNotEmpty)
               _isSending
                   ? const Padding(
                       padding: EdgeInsets.all(12),
@@ -1782,10 +1931,23 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       ),
                     )
                   : IconButton(
-                      icon:
-                          const Icon(Icons.send_rounded, color: Colors.blueAccent),
-                      onPressed: isAdminOnly ? null : _sendTextMessage,
-                    ),
+                      icon: const Icon(Icons.send_rounded, color: Colors.blueAccent),
+                      onPressed: isAdminOnly
+                          ? null
+                          : (_pendingFilePath != null ? _sendPendingAttachment : _sendTextMessage),
+                    )
+            else
+              GestureDetector(
+                onTap: isAdminOnly ? null : _startRecording,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blueAccent.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.mic_rounded, color: Colors.blueAccent, size: 24),
+                ),
+              ),
           ],
         ),
       );

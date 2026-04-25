@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/config/app_config.dart';
 import '../../chat/chat_api_service.dart';
 
 /// Parent-side ChatViewModel.
@@ -216,7 +217,7 @@ class ChatViewModel extends ChangeNotifier {
     try {
       final api = await _getApi();
       // POST /messages/:id/reply — the only endpoint available to parents
-      final result = await api.replyToMessage(replyId, content);
+      final result = await _withRetry(() => api.replyToMessage(replyId, content));
       // Replace temp with the real message ID from the server response
       final realId = (result['_id'] ?? result['id'])?.toString() ?? '';
       if (realId.isNotEmpty) {
@@ -274,18 +275,20 @@ class ChatViewModel extends ChangeNotifier {
 
     try {
       final api = await _getApi();
-      final result = await api.replyWithAttachment(
+      final result = await _withRetry(() => api.replyWithAttachment(
         messageId: replyId,
         content: caption,
         filePath: filePath,
         fileName: fileName,
         mimeType: mimeType,
-      );
+      ));
       final realId = (result['_id'] ?? result['id'])?.toString() ?? '';
+      final serverRoot = AppConfig.serverUrl;
       final attachments = <String>[];
       if (result['attachments'] is List) {
         for (final a in result['attachments'] as List) {
-          final url = (a is Map ? a['url']?.toString() : a?.toString()) ?? '';
+          String url = (a is Map ? a['url']?.toString() : a?.toString()) ?? '';
+          if (url.startsWith('/')) url = '$serverRoot$url';
           if (url.isNotEmpty) attachments.add(url);
         }
       }
@@ -376,6 +379,25 @@ class ChatViewModel extends ChangeNotifier {
     } catch (e) {
       debugPrint('[ParentChatVM] deleteMessage error: $e');
       return false;
+    }
+  }
+
+  // Retry once on connection-drop errors (Render free-tier cold-start)
+  bool _isConnectionDrop(Object e) =>
+      e is DioException &&
+      (e.type == DioExceptionType.unknown ||
+          e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout);
+
+  Future<T> _withRetry<T>(Future<T> Function() fn) async {
+    try {
+      return await fn();
+    } catch (e) {
+      if (_isConnectionDrop(e)) {
+        await Future.delayed(const Duration(seconds: 3));
+        return fn();
+      }
+      rethrow;
     }
   }
 
@@ -523,15 +545,46 @@ class ChatViewModel extends ChangeNotifier {
       senderAvatar = senderObj['avatar']?.toString();
     }
 
-    // Extract attachments
+    // Extract attachments and infer message type
+    final String serverRoot = AppConfig.serverUrl;
     List<String> attachments = [];
+    String inferredMime = '';
     if (msg['attachments'] is List) {
       for (final a in msg['attachments']) {
-        if (a is String && a.isNotEmpty) {
-          attachments.add(a);
+        String url = '';
+        if (a is String) {
+          url = a;
         } else if (a is Map) {
-          final url = (a['url'] ?? a['path'] ?? '').toString();
-          if (url.isNotEmpty) attachments.add(url);
+          url = (a['url'] ?? a['path'] ?? '').toString();
+          if (inferredMime.isEmpty) {
+            inferredMime = (a['mimetype'] ?? a['mimeType'] ?? '').toString();
+          }
+        }
+        if (url.isNotEmpty) {
+          // Convert relative server paths to full URLs
+          if (url.startsWith('/')) url = '$serverRoot$url';
+          attachments.add(url);
+        }
+      }
+    }
+
+    String messageType = 'text';
+    if (attachments.isNotEmpty) {
+      if (inferredMime.startsWith('image/')) {
+        messageType = 'image';
+      } else if (inferredMime.startsWith('audio/') || inferredMime.startsWith('video/')) {
+        messageType = 'voice';
+      } else if (inferredMime.isNotEmpty) {
+        messageType = 'document';
+      } else {
+        // Fallback: infer from URL extension
+        final ext = attachments.first.split('.').last.toLowerCase().split('?').first;
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext)) {
+          messageType = 'image';
+        } else if (['m4a', 'aac', 'mp3', 'wav', 'ogg', 'opus'].contains(ext)) {
+          messageType = 'voice';
+        } else {
+          messageType = 'document';
         }
       }
     }
@@ -547,6 +600,7 @@ class ChatViewModel extends ChangeNotifier {
       createdAt: createdAt,
       isMe: senderId == _currentUserId,
       metadata: {'allowReply': msg['allowReply'] ?? false},
+      type: messageType,
       attachments: attachments,
     );
   }

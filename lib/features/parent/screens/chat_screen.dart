@@ -1201,8 +1201,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 )
               else
                 GestureDetector(
-                  onLongPressStart: (_) => _startRecording(),
-                  onLongPressEnd: (_) => _stopRecording(),
+                  onTap: _startRecording,
                   child: Container(
                     width: 36, height: 36,
                     decoration: BoxDecoration(
