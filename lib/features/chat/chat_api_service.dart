@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:http_parser/http_parser.dart';
 
 class ChatApiService {
   final Dio _dio;
@@ -57,6 +58,33 @@ class ChatApiService {
       String messageId, String content) async {
     final response = await _dio.post('/messages/$messageId/reply',
         data: {'content': content});
+    final raw = response.data;
+    return (raw is Map ? raw['data'] ?? raw : raw) as Map<String, dynamic>;
+  }
+
+  // ---------------------------------------------------------------------------
+  // POST /messages/:id/reply  — with file attachment
+  // ---------------------------------------------------------------------------
+  Future<Map<String, dynamic>> replyWithAttachment({
+    required String messageId,
+    String content = '',
+    required String filePath,
+    required String fileName,
+    required String mimeType,
+  }) async {
+    final formData = FormData.fromMap({
+      'content': content,
+      'attachment': await MultipartFile.fromFile(
+        filePath,
+        filename: fileName,
+        contentType: MediaType.parse(mimeType),
+      ),
+    });
+    final response = await _dio.post(
+      '/messages/$messageId/reply',
+      data: formData,
+      options: Options(contentType: 'multipart/form-data'),
+    );
     final raw = response.data;
     return (raw is Map ? raw['data'] ?? raw : raw) as Map<String, dynamic>;
   }

@@ -1,14 +1,19 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:record/record.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../core/models/models.dart';
 import '../../../core/widgets/deep_space_background.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../viewmodels/chat_view_model.dart';
+import '../../chat/widgets/whatsapp_bubble.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -548,6 +553,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   bool _isWriting = false;
   Timer? _messagePollingTimer;
 
+  // Media / recording state
+  final AudioRecorder _recorder = AudioRecorder();
+  bool _isRecording = false;
+  Duration _recordDuration = Duration.zero;
+  Timer? _recordTimer;
+  String? _pendingFilePath;
+  String? _pendingFileName;
+  String? _pendingMimeType;
+  String? _pendingType; // 'image', 'voice', 'document'
+
   @override
   void initState() {
     super.initState();
@@ -583,9 +598,127 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   @override
   void dispose() {
     _messagePollingTimer?.cancel();
+    _recordTimer?.cancel();
+    _recorder.dispose();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _clearPending() {
+    setState(() {
+      _pendingFilePath = null;
+      _pendingFileName = null;
+      _pendingMimeType = null;
+      _pendingType = null;
+    });
+  }
+
+  Future<void> _pickImage() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (picked == null) return;
+    setState(() {
+      _pendingFilePath = picked.path;
+      _pendingFileName = picked.name;
+      _pendingMimeType = 'image/jpeg';
+      _pendingType = 'image';
+    });
+  }
+
+  Future<void> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'png', 'jpg', 'jpeg'],
+    );
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.first;
+    if (file.path == null) return;
+    final ext = file.extension?.toLowerCase() ?? '';
+    String mime = 'application/octet-stream';
+    if (['jpg', 'jpeg'].contains(ext)) mime = 'image/jpeg';
+    else if (ext == 'png') mime = 'image/png';
+    else if (ext == 'pdf') mime = 'application/pdf';
+    else if (['doc', 'docx'].contains(ext)) mime = 'application/msword';
+    else if (['xls', 'xlsx'].contains(ext)) mime = 'application/vnd.ms-excel';
+    else if (ext == 'txt') mime = 'text/plain';
+
+    final isImage = ['jpg', 'jpeg', 'png'].contains(ext);
+    setState(() {
+      _pendingFilePath = file.path;
+      _pendingFileName = file.name;
+      _pendingMimeType = mime;
+      _pendingType = isImage ? 'image' : 'document';
+    });
+  }
+
+  Future<void> _startRecording() async {
+    final micOk = await Permission.microphone.request();
+    if (!micOk.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Microphone permission required')),
+        );
+      }
+      return;
+    }
+    final dir = await getTemporaryDirectory();
+    final path = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
+    setState(() {
+      _isRecording = true;
+      _recordDuration = Duration.zero;
+    });
+    _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _recordDuration += const Duration(seconds: 1));
+    });
+  }
+
+  Future<void> _stopRecording() async {
+    _recordTimer?.cancel();
+    final path = await _recorder.stop();
+    setState(() => _isRecording = false);
+    if (path == null) return;
+    setState(() {
+      _pendingFilePath = path;
+      _pendingFileName = path.split('/').last;
+      _pendingMimeType = 'audio/aac';
+      _pendingType = 'voice';
+    });
+    // Auto-send voice
+    await _sendPending();
+  }
+
+  Future<void> _cancelRecording() async {
+    _recordTimer?.cancel();
+    await _recorder.stop();
+    setState(() => _isRecording = false);
+  }
+
+  Future<void> _sendPending() async {
+    final path = _pendingFilePath;
+    final name = _pendingFileName;
+    final mime = _pendingMimeType;
+    final type = _pendingType;
+    if (path == null || name == null || mime == null || type == null) return;
+    _clearPending();
+
+    final vm = context.read<ChatViewModel>();
+    await vm.sendAttachment(
+      widget.thread.id,
+      filePath: path,
+      fileName: name,
+      mimeType: mime,
+      messageType: type,
+      caption: _controller.text.trim(),
+    );
+    _controller.clear();
+
+    if (!mounted) return;
+    if (vm.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(vm.errorMessage!), backgroundColor: Colors.redAccent),
+      );
+    }
   }
 
   void _scrollToBottom() {
@@ -751,7 +884,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       return Column(
                         children: [
                           if (dateSeparator != null) dateSeparator,
-                          _MessageBubble(
+                          WhatsappBubble(
                             message: msg,
                             isGroup: isGroup,
                             onEdit: msg.isMe
@@ -956,316 +1089,211 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       );
     }
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
-        borderRadius: BorderRadius.circular(40),
-        border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.1)
-                : Colors.black12),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              style: TextStyle(color: primaryTextColor),
-              decoration: InputDecoration(
-                hintText: AppLocalizations.of(context)!
-                    .translate('input_message_hint'),
-                hintStyle: TextStyle(
-                    color: primaryTextColor.withValues(alpha: 0.4)),
-                border: InputBorder.none,
-              ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Attachment preview
+        if (_pendingFilePath != null && _pendingType != 'voice')
+          Container(
+            margin: const EdgeInsets.fromLTRB(24, 0, 24, 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(16),
             ),
-          ),
-          IconButton(
-            onPressed: _sendMessage,
-            icon: const Icon(Icons.send_rounded, color: Colors.blueAccent),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Message Bubble
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _MessageBubble extends StatelessWidget {
-  final ChatMessageModel message;
-  final bool isGroup;
-  final VoidCallback? onEdit;
-  final VoidCallback? onDelete;
-
-  const _MessageBubble({
-    required this.message,
-    this.isGroup = false,
-    this.onEdit,
-    this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isMe = message.isMe;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bubbleColor = isMe
-        ? Colors.blueAccent
-        : (isDark
-            ? Colors.white.withValues(alpha: 0.1)
-            : Colors.black.withValues(alpha: 0.05));
-    final textColor =
-        isMe ? Colors.white : (isDark ? Colors.white : Colors.black);
-    final timeColor = isMe
-        ? Colors.white.withValues(alpha: 0.6)
-        : (isDark ? Colors.white38 : Colors.black38);
-
-    // Show avatar for received messages (always in groups, optional in direct)
-    final showAvatar = !isMe;
-    // Show sender name in group chats for received messages
-    final showSenderName = isGroup && !isMe;
-
-    return GestureDetector(
-      onLongPress: () => _showContextMenu(context),
-      child: Align(
-        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            if (showAvatar)
-              Padding(
-                padding: const EdgeInsets.only(right: 8, bottom: 12),
-                child: CircleAvatar(
-                  radius: 14,
-                  backgroundImage: message.senderAvatar != null &&
-                          message.senderAvatar!.isNotEmpty
-                      ? NetworkImage(message.senderAvatar!)
-                      : null,
-                  backgroundColor:
-                      isDark ? Colors.white10 : Colors.blue.shade50,
-                  child: (message.senderAvatar == null ||
-                          message.senderAvatar!.isEmpty)
-                      ? Text(
-                          _initials(message.senderName),
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.blueAccent,
-                          ),
-                        )
-                      : null,
+            child: Row(
+              children: [
+                Icon(
+                  _pendingType == 'image' ? Icons.image_rounded : Icons.attach_file_rounded,
+                  color: Colors.blueAccent,
+                  size: 20,
                 ),
-              ),
-            Flexible(
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.72),
-                decoration: BoxDecoration(
-                  color: bubbleColor,
-                  borderRadius: BorderRadius.only(
-                    topLeft: const Radius.circular(20),
-                    topRight: const Radius.circular(20),
-                    bottomLeft: Radius.circular(isMe ? 20 : 0),
-                    bottomRight: Radius.circular(isMe ? 0 : 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _pendingFileName ?? '',
+                    style: TextStyle(color: primaryTextColor, fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment:
-                      isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                  children: [
-                    if (showSenderName && message.senderName.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Text(
-                          message.senderName,
-                          style: TextStyle(
-                            color: isMe
-                                ? Colors.white70
-                                : Colors.blueAccent,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    // Attachments (images)
-                    if (message.attachments.isNotEmpty)
-                      ...message.attachments.map((url) =>
-                          _buildAttachment(context, url, isMe)),
-                    // Text content
-                    if (message.content.isNotEmpty)
-                      Text(
-                        message.content,
-                        style: TextStyle(color: textColor, fontSize: 15),
-                      ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _formatTime(message),
-                      style: TextStyle(color: timeColor, fontSize: 10),
-                    ),
-                  ],
+                GestureDetector(
+                  onTap: _clearPending,
+                  child: const Icon(Icons.close_rounded, size: 18, color: Colors.redAccent),
+                ),
+              ],
+            ),
+          ),
+
+        // Recording indicator
+        if (_isRecording)
+          Container(
+            margin: const EdgeInsets.fromLTRB(24, 0, 24, 6),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.red.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.mic, color: Colors.redAccent, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'Recording... ${_recordDuration.inMinutes.toString().padLeft(2, '0')}:${(_recordDuration.inSeconds % 60).toString().padLeft(2, '0')}',
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: _cancelRecording,
+                  child: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                ),
+              ],
+            ),
+          ),
+
+        // Input bar
+        Container(
+          margin: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+            borderRadius: BorderRadius.circular(40),
+            border: Border.all(
+                color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black12),
+          ),
+          child: Row(
+            children: [
+              // Attach button
+              IconButton(
+                onPressed: () => _showAttachMenu(context),
+                icon: Icon(Icons.attach_file_rounded,
+                    color: primaryTextColor.withValues(alpha: 0.5), size: 22),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              ),
+              // Text field
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  style: TextStyle(color: primaryTextColor),
+                  decoration: InputDecoration(
+                    hintText: AppLocalizations.of(context)!.translate('input_message_hint'),
+                    hintStyle: TextStyle(color: primaryTextColor.withValues(alpha: 0.4)),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
                 ),
               ),
-            ),
-          ],
+              // Send / mic button
+              if (_isWriting || _pendingFilePath != null)
+                IconButton(
+                  onPressed: _pendingFilePath != null ? _sendPending : _sendMessage,
+                  icon: const Icon(Icons.send_rounded, color: Colors.blueAccent),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                )
+              else if (_isRecording)
+                IconButton(
+                  onPressed: _stopRecording,
+                  icon: const Icon(Icons.stop_circle_rounded, color: Colors.redAccent, size: 28),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                )
+              else
+                GestureDetector(
+                  onLongPressStart: (_) => _startRecording(),
+                  onLongPressEnd: (_) => _stopRecording(),
+                  child: Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.blueAccent.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.mic_rounded, color: Colors.blueAccent, size: 20),
+                  ),
+                ),
+              const SizedBox(width: 4),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildAttachment(BuildContext context, String url, bool isMe) {
-    final lower = url.toLowerCase();
-    final isImage = lower.endsWith('.jpg') ||
-        lower.endsWith('.jpeg') ||
-        lower.endsWith('.png') ||
-        lower.endsWith('.gif') ||
-        lower.endsWith('.webp');
-
-    if (isImage) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Image.network(
-            url,
-            width: 200,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
-              width: 200,
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.grey.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.broken_image_rounded, size: 32),
-            ),
-          ),
-        ),
-      );
-    }
-
-    // Document/file attachment
-    final fileName = Uri.tryParse(url)?.pathSegments.lastOrNull ?? 'Document';
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: isMe
-            ? Colors.white.withValues(alpha: 0.15)
-            : Colors.blueAccent.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.insert_drive_file_rounded,
-              size: 20,
-              color: isMe ? Colors.white70 : Colors.blueAccent),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              fileName,
-              style: TextStyle(
-                color: isMe ? Colors.white : Colors.blueAccent,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatTime(ChatMessageModel msg) {
-    if (msg.createdAt != null) {
-      return DateFormat('HH:mm').format(msg.createdAt!);
-    }
-    return msg.time;
-  }
-
-  void _showContextMenu(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  void _showAttachMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF1E293B)
+          : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white24 : Colors.black12,
-                borderRadius: BorderRadius.circular(2),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _attachOption(
+                icon: Icons.image_rounded,
+                label: 'Photo',
+                color: Colors.green,
+                onTap: () { Navigator.pop(context); _pickImage(); },
               ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.copy_rounded),
-              title: Text(
-                  AppLocalizations.of(context)!.translate('copy')),
-              onTap: () {
-                Clipboard.setData(ClipboardData(text: message.content));
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(AppLocalizations.of(context)!
-                        .translate('message_copied')),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              },
-            ),
-            if (onEdit != null)
-              ListTile(
-                leading: const Icon(Icons.edit_rounded),
-                title: Text(AppLocalizations.of(context)!
-                    .translate('edit_message')),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  onEdit!();
+              _attachOption(
+                icon: Icons.insert_drive_file_rounded,
+                label: 'File',
+                color: Colors.blueAccent,
+                onTap: () { Navigator.pop(context); _pickFile(); },
+              ),
+              _attachOption(
+                icon: Icons.camera_alt_rounded,
+                label: 'Camera',
+                color: Colors.orange,
+                onTap: () async {
+                  Navigator.pop(context);
+                  final picked = await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 80);
+                  if (picked == null) return;
+                  setState(() {
+                    _pendingFilePath = picked.path;
+                    _pendingFileName = picked.name;
+                    _pendingMimeType = 'image/jpeg';
+                    _pendingType = 'image';
+                  });
                 },
               ),
-            if (onDelete != null)
-              ListTile(
-                leading:
-                    const Icon(Icons.delete_rounded, color: Colors.redAccent),
-                title: Text(
-                  AppLocalizations.of(context)!.translate('delete_message'),
-                  style: const TextStyle(color: Colors.redAccent),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  onDelete!();
-                },
-              ),
-            const SizedBox(height: 8),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  String _initials(String name) {
-    if (name.isEmpty) return '?';
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return name[0].toUpperCase();
+  Widget _attachOption({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 56, height: 56,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 6),
+          Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
   }
 }
+

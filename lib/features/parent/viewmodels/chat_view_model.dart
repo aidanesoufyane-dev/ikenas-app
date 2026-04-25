@@ -242,6 +242,78 @@ class ChatViewModel extends ChangeNotifier {
     }
   }
 
+  // ── sendAttachment ───────────────────────────────────────────
+  Future<void> sendAttachment(
+    String threadId, {
+    required String filePath,
+    required String fileName,
+    required String mimeType,
+    required String messageType, // 'image', 'voice', 'document'
+    String caption = '',
+  }) async {
+    final replyId = replyableMessageId;
+    if (replyId == null) {
+      _errorMessage = 'replies_not_allowed';
+      notifyListeners();
+      return;
+    }
+
+    final now = DateTime.now();
+    final temp = ChatMessageModel(
+      id: 'temp_${now.millisecondsSinceEpoch}',
+      threadId: threadId,
+      senderId: _currentUserId ?? '',
+      content: caption,
+      time: _fmt(now),
+      isMe: true,
+      type: messageType,
+      attachments: [filePath],
+    );
+    _activeMessages.add(temp);
+    notifyListeners();
+
+    try {
+      final api = await _getApi();
+      final result = await api.replyWithAttachment(
+        messageId: replyId,
+        content: caption,
+        filePath: filePath,
+        fileName: fileName,
+        mimeType: mimeType,
+      );
+      final realId = (result['_id'] ?? result['id'])?.toString() ?? '';
+      final attachments = <String>[];
+      if (result['attachments'] is List) {
+        for (final a in result['attachments'] as List) {
+          final url = (a is Map ? a['url']?.toString() : a?.toString()) ?? '';
+          if (url.isNotEmpty) attachments.add(url);
+        }
+      }
+      if (realId.isNotEmpty) {
+        final idx = _activeMessages.indexWhere((m) => m.id == temp.id);
+        if (idx != -1) {
+          _activeMessages[idx] = ChatMessageModel(
+            id: realId,
+            threadId: temp.threadId,
+            senderId: temp.senderId,
+            content: caption,
+            time: temp.time,
+            isMe: true,
+            type: messageType,
+            attachments: attachments.isNotEmpty ? attachments : [filePath],
+          );
+        }
+      }
+      _errorMessage = null;
+    } catch (e) {
+      _activeMessages.removeWhere((m) => m.id == temp.id);
+      _errorMessage = e.toString();
+      debugPrint('[ParentChatVM] sendAttachment error: $e');
+    } finally {
+      notifyListeners();
+    }
+  }
+
   // ── editMessage ──────────────────────────────────────────────
   Future<bool> editMessage(String messageId, String newContent) async {
     try {
