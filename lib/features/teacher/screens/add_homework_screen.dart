@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
@@ -23,6 +24,8 @@ class _AddHomeworkScreenState extends State<AddHomeworkScreen> {
   Map<String, dynamic>? _selectedSubjectData;
 
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 7));
+  String? _attachedFilePath;
+  String? _attachedFileName;
   bool _isPublishing = false;
   bool _isLoading = true;
   String? _error;
@@ -288,35 +291,66 @@ class _AddHomeworkScreenState extends State<AddHomeworkScreen> {
                         color: secondaryTextColor,
                         letterSpacing: 1.5)),
                 const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 40),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.01)
-                        : Colors.white.withValues(alpha: 0.5),
-                    border: Border.all(
-                        color: isDark
-                            ? Colors.white10
-                            : Colors.black.withValues(alpha: 0.1),
-                        style: BorderStyle.solid),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.cloud_upload_outlined,
-                          color: secondaryTextColor.withValues(alpha: 0.5),
-                          size: 40),
-                      const SizedBox(height: 16),
-                      Text(
-                          AppLocalizations.of(context)!
-                              .translate('upload_doc_hint'),
+                GestureDetector(
+                  onTap: _pickFile,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.01)
+                          : Colors.white.withValues(alpha: 0.5),
+                      border: Border.all(
+                          color: _attachedFileName != null
+                              ? Colors.blueAccent
+                              : (isDark
+                                  ? Colors.white10
+                                  : Colors.black.withValues(alpha: 0.1)),
+                          style: BorderStyle.solid),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          _attachedFileName != null
+                              ? Icons.check_circle_rounded
+                              : Icons.cloud_upload_outlined,
+                          color: _attachedFileName != null
+                              ? Colors.blueAccent
+                              : secondaryTextColor.withValues(alpha: 0.5),
+                          size: 40,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _attachedFileName ??
+                              AppLocalizations.of(context)!.translate('upload_doc_hint'),
                           style: TextStyle(
-                              color: secondaryTextColor,
+                              color: _attachedFileName != null
+                                  ? Colors.blueAccent
+                                  : secondaryTextColor,
                               fontSize: 12,
                               fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5)),
-                    ],
+                              letterSpacing: 0.5),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (_attachedFileName != null) ...[
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: () => setState(() {
+                              _attachedFilePath = null;
+                              _attachedFileName = null;
+                            }),
+                            child: Text('Supprimer',
+                                style: TextStyle(
+                                    color: Colors.redAccent.withValues(alpha: 0.8),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700)),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
 
@@ -436,6 +470,21 @@ class _AddHomeworkScreenState extends State<AddHomeworkScreen> {
     );
   }
 
+  Future<void> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'png', 'jpg', 'jpeg'],
+      allowMultiple: false,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.first;
+    if (file.path == null) return;
+    setState(() {
+      _attachedFilePath = file.path;
+      _attachedFileName = file.name;
+    });
+  }
+
   Future<void> _selectDate() async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final picked = await showDatePicker(
@@ -479,6 +528,8 @@ class _AddHomeworkScreenState extends State<AddHomeworkScreen> {
         classId: _selectedClass!.id,
         subjectId: _selectedSubjectData!['_id']?.toString() ?? _selectedSubjectData!['id']?.toString() ?? '',
         deadline: _selectedDate,
+        filePath: _attachedFilePath,
+        fileName: _attachedFileName,
       );
       
       if (mounted) {

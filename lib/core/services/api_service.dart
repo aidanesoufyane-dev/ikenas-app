@@ -493,15 +493,20 @@ class ApiService {
     required String classId,
     required String subjectId,
     required DateTime deadline,
+    String? filePath,
+    String? fileName,
   }) async {
-    final formData = FormData.fromMap({
+    final map = <String, dynamic>{
       'title': title,
       'description': description,
       'classe': classId,
       'subject': subjectId,
       'deadline': deadline.toIso8601String(),
-    });
-    
+    };
+    if (filePath != null && fileName != null) {
+      map['files'] = await MultipartFile.fromFile(filePath, filename: fileName);
+    }
+    final formData = FormData.fromMap(map);
     final response = await _dio.post('/assignments', data: formData);
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('Failed to add homework');
