@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
@@ -13,7 +12,7 @@ import '../../../core/models/models.dart';
 import '../../../core/widgets/deep_space_background.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../viewmodels/chat_view_model.dart';
-import '../../chat/widgets/whatsapp_bubble.dart';
+import '../../chat/widgets/audio_message_player.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -331,6 +330,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Thread tile — matches teacher _ChatTile style (no blur, radius 32, clean)
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _ChatThreadTile extends StatelessWidget {
   final ChatThreadModel thread;
   final int index;
@@ -340,190 +343,150 @@ class _ChatThreadTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryTextColor = isDark ? Colors.white : const Color(0xFF0F172A);
-    final secondaryTextColor = isDark ? Colors.white54 : Colors.black54;
+    final secondaryTextColor = isDark ? Colors.white38 : Colors.black26;
+    final cardBg =
+        isDark ? Colors.white.withValues(alpha: 0.04) : Colors.white;
+    final isGroup = thread.contactRole == 'GROUPE';
 
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => ChatDetailScreen(thread: thread)),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(
+            color:
+                isDark ? Colors.white.withValues(alpha: 0.06) : Colors.white),
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5))
+              ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(36),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.03)
-                  : Colors.white.withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(36),
-              border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.white),
-              boxShadow: [
-                if (!isDark)
-                  BoxShadow(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10))
-              ],
-            ),
-            child: Row(
-              children: [
-                Stack(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(colors: [
-                            thread.contactRole == 'GROUPE'
-                                ? Colors.orangeAccent.withValues(alpha: 0.5)
-                                : Colors.blueAccent.withValues(alpha: 0.5),
-                            Colors.purpleAccent.withValues(alpha: 0.2)
-                          ])),
-                      child: thread.contactRole == 'GROUPE'
-                          ? Container(
-                              width: 60,
-                              height: 60,
-                              decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.transparent),
-                              child: const Icon(Icons.groups_rounded,
-                                  size: 30, color: Colors.orangeAccent),
-                            )
-                          : CircleAvatar(
-                              radius: 30,
-                              backgroundImage: thread.avatarUrl != null
-                                  ? NetworkImage(thread.avatarUrl!)
-                                  : null,
-                              backgroundColor:
-                                  isDark ? Colors.white10 : Colors.blue.shade50,
-                              child: thread.avatarUrl == null
-                                  ? Text(
-                                      _initials(thread.contactName),
-                                      style: TextStyle(
-                                        color: Colors.blueAccent,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 18,
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                    ),
-                    if (thread.unreadCount > 0)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.blueAccent,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                                color: isDark
-                                    ? const Color(0xFF0F172A)
-                                    : Colors.white,
-                                width: 2),
-                            boxShadow: [
-                              BoxShadow(
-                                  color:
-                                      Colors.blueAccent.withValues(alpha: 0.4),
-                                  blurRadius: 8)
-                            ],
-                          ),
-                          child: Text('${thread.unreadCount}',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900)),
-                        ).animate(onPlay: (c) => c.repeat(reverse: true)).scale(
-                            begin: const Offset(1, 1),
-                            end: const Offset(1.1, 1.1),
-                            duration: 1.seconds),
-                      ),
-                  ],
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                              child: Text(thread.contactName,
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      color: primaryTextColor,
-                                      fontSize: 17,
-                                      letterSpacing: -0.5),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis)),
-                          Text(thread.lastTime,
+      child: ListTile(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ChatDetailScreen(thread: thread)),
+        ),
+        contentPadding: const EdgeInsets.all(20),
+        leading: Stack(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                    color: isGroup
+                        ? Colors.orangeAccent.withValues(alpha: 0.3)
+                        : Colors.blueAccent.withValues(alpha: 0.2)),
+              ),
+              child: isGroup
+                  ? CircleAvatar(
+                      radius: 26,
+                      backgroundColor:
+                          Colors.orangeAccent.withValues(alpha: 0.15),
+                      child: const Icon(Icons.groups_rounded,
+                          size: 26, color: Colors.orangeAccent),
+                    )
+                  : CircleAvatar(
+                      radius: 26,
+                      backgroundImage: thread.avatarUrl != null
+                          ? NetworkImage(thread.avatarUrl!)
+                          : null,
+                      backgroundColor: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.white.withValues(alpha: 0.7),
+                      child: thread.avatarUrl == null
+                          ? Text(
+                              _initials(thread.contactName),
                               style: TextStyle(
-                                  color: thread.unreadCount > 0
-                                      ? Colors.blueAccent
-                                      : secondaryTextColor,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w900)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              thread.lastMessage,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: thread.unreadCount > 0
-                                    ? primaryTextColor
-                                    : secondaryTextColor,
-                                fontSize: 14,
-                                fontWeight: thread.unreadCount > 0
-                                    ? FontWeight.w900
-                                    : FontWeight.bold,
+                                color: primaryTextColor,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 18,
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                                color: isDark ? Colors.white10 : Colors.white,
-                                borderRadius: BorderRadius.circular(12)),
-                            child: Text(
-                                thread.contactRole == 'GROUPE'
-                                    ? AppLocalizations.of(context)!
-                                        .translate('class_tab_label')
-                                    : thread.contactRole.toUpperCase(),
-                                style: TextStyle(
-                                    color: isDark
-                                        ? Colors.white70
-                                        : Colors.black54,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1)),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                            )
+                          : null,
+                    ),
+            ),
+            if (thread.unreadCount > 0)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: const BoxDecoration(
+                      color: Colors.blueAccent, shape: BoxShape.circle),
+                  child: Text('${thread.unreadCount}',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900)),
                 ),
-              ],
+              ),
+          ],
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                thread.contactName,
+                style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                    color: primaryTextColor,
+                    letterSpacing: -0.3),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (thread.contactRole.isNotEmpty && !isGroup)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  thread.contactRole.toUpperCase(),
+                  style: const TextStyle(
+                      color: Colors.blueAccent,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5),
+                ),
+              ),
+          ],
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 6.0),
+          child: Text(
+            thread.lastMessage,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13,
+              color: thread.unreadCount > 0
+                  ? (isDark ? Colors.white70 : Colors.black87)
+                  : secondaryTextColor,
+              fontWeight:
+                  thread.unreadCount > 0 ? FontWeight.w900 : FontWeight.bold,
             ),
           ),
         ),
-      ).animate().fadeIn(delay: (index * 80).ms).slideX(begin: 0.05),
-    );
+        trailing: Text(
+          thread.lastTime,
+          style: TextStyle(
+              color: secondaryTextColor,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.2),
+        ),
+      ),
+    ).animate().fadeIn(delay: (index * 80).ms).slideX(begin: 0.05);
   }
 
   String _initials(String name) {
@@ -556,12 +519,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   // Media / recording state
   final AudioRecorder _recorder = AudioRecorder();
   bool _isRecording = false;
-  Duration _recordDuration = Duration.zero;
+  int _recordingSeconds = 0;
   Timer? _recordTimer;
   String? _pendingFilePath;
   String? _pendingFileName;
   String? _pendingMimeType;
   String? _pendingType; // 'image', 'voice', 'document'
+
+  // Selection mode
+  final Set<String> _selectedMessageIds = {};
+  bool get _isSelectionMode => _selectedMessageIds.isNotEmpty;
 
   @override
   void initState() {
@@ -605,6 +572,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     super.dispose();
   }
 
+  void _toggleSelection(String msgId) {
+    setState(() {
+      if (_selectedMessageIds.contains(msgId)) {
+        _selectedMessageIds.remove(msgId);
+      } else {
+        _selectedMessageIds.add(msgId);
+      }
+    });
+  }
+
   void _clearPending() {
     setState(() {
       _pendingFilePath = null;
@@ -615,7 +592,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80);
+    final picked = await ImagePicker()
+        .pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (picked == null) return;
     setState(() {
       _pendingFilePath = picked.path;
@@ -628,19 +606,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Future<void> _pickFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'png', 'jpg', 'jpeg'],
+      allowedExtensions: [
+        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'png', 'jpg', 'jpeg'
+      ],
     );
     if (result == null || result.files.isEmpty) return;
     final file = result.files.first;
     if (file.path == null) return;
     final ext = file.extension?.toLowerCase() ?? '';
     String mime = 'application/octet-stream';
-    if (['jpg', 'jpeg'].contains(ext)) mime = 'image/jpeg';
-    else if (ext == 'png') mime = 'image/png';
-    else if (ext == 'pdf') mime = 'application/pdf';
-    else if (['doc', 'docx'].contains(ext)) mime = 'application/msword';
-    else if (['xls', 'xlsx'].contains(ext)) mime = 'application/vnd.ms-excel';
-    else if (ext == 'txt') mime = 'text/plain';
+    if (['jpg', 'jpeg'].contains(ext)) { mime = 'image/jpeg'; }
+    else if (ext == 'png') { mime = 'image/png'; }
+    else if (ext == 'pdf') { mime = 'application/pdf'; }
+    else if (['doc', 'docx'].contains(ext)) { mime = 'application/msword'; }
+    else if (['xls', 'xlsx'].contains(ext)) { mime = 'application/vnd.ms-excel'; }
+    else if (ext == 'txt') { mime = 'text/plain'; }
 
     final isImage = ['jpg', 'jpeg', 'png'].contains(ext);
     setState(() {
@@ -662,14 +642,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       return;
     }
     final dir = await getTemporaryDirectory();
-    final path = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
-    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
+    final path =
+        '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    await _recorder.start(
+        const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
     setState(() {
       _isRecording = true;
-      _recordDuration = Duration.zero;
+      _recordingSeconds = 0;
     });
     _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _recordDuration += const Duration(seconds: 1));
+      if (mounted) setState(() => _recordingSeconds++);
     });
   }
 
@@ -684,7 +666,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       _pendingMimeType = 'audio/aac';
       _pendingType = 'voice';
     });
-    // Auto-send voice
     await _sendPending();
   }
 
@@ -716,7 +697,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (!mounted) return;
     if (vm.errorMessage != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(vm.errorMessage!), backgroundColor: Colors.redAccent),
+        SnackBar(
+            content: Text(vm.errorMessage!),
+            backgroundColor: Colors.redAccent),
       );
     }
   }
@@ -754,161 +737,424 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
   }
 
+  void _confirmDeleteSelected(ChatViewModel vm) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor:
+            Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF1E293B)
+                : Colors.white,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+            '${_selectedMessageIds.length} message(s)',
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(AppLocalizations.of(context)!
+            .translate('delete_message_confirm')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+                AppLocalizations.of(context)!.translate('cancel')),
+          ),
+          FilledButton(
+            style:
+                FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () async {
+              for (final id in _selectedMessageIds) {
+                await vm.deleteMessage(id);
+              }
+              if (mounted) {
+                setState(() => _selectedMessageIds.clear());
+              }
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: Text(
+                AppLocalizations.of(context)!.translate('delete')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryTextColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final isGroup = widget.thread.contactRole == 'GROUPE';
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
+    return Consumer<ChatViewModel>(
+      builder: (context, vm, _) => Scaffold(
+        extendBodyBehindAppBar: true,
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () {
-            context.read<ChatViewModel>().clearActiveChat();
-            Navigator.pop(context);
-          },
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: primaryTextColor),
-        ),
-        title: Row(
-          children: [
-            if (isGroup)
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.orangeAccent.withValues(alpha: 0.2),
-                child: const Icon(Icons.groups_rounded,
-                    size: 20, color: Colors.orangeAccent),
-              )
-            else
-              CircleAvatar(
-                radius: 18,
-                backgroundImage: widget.thread.avatarUrl != null
-                    ? NetworkImage(widget.thread.avatarUrl!)
-                    : null,
+        appBar: _isSelectionMode
+            ? AppBar(
                 backgroundColor:
-                    isDark ? Colors.white10 : Colors.blue.shade50,
-                child: widget.thread.avatarUrl == null
-                    ? Text(
-                        _initials(widget.thread.contactName),
-                        style: const TextStyle(
-                          color: Colors.blueAccent,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 13,
-                        ),
-                      )
-                    : null,
-              ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(widget.thread.contactName,
-                      style: TextStyle(
-                          color: primaryTextColor,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900)),
-                  Text(
-                      isGroup
-                          ? AppLocalizations.of(context)!
-                              .translate('class_tab_label')
-                          : widget.thread.contactRole,
-                      style: TextStyle(
-                          color: primaryTextColor.withValues(alpha: 0.5),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold)),
+                    isDark ? const Color(0xFF1E293B) : Colors.white,
+                elevation: 4,
+                leading: IconButton(
+                  icon: const Icon(Icons.close_rounded,
+                      color: Colors.blueAccent),
+                  onPressed: () =>
+                      setState(() => _selectedMessageIds.clear()),
+                ),
+                title: Text(
+                  '${_selectedMessageIds.length}',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      color: Colors.blueAccent),
+                ),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded,
+                        color: Colors.redAccent),
+                    onPressed: () => _confirmDeleteSelected(vm),
+                  ),
+                  const SizedBox(width: 8),
                 ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: DeepSpaceBackground(
-        showOrbs: false,
-        child: Column(
-          children: [
-            Expanded(
-              child: Consumer<ChatViewModel>(
-                builder: (context, vm, child) {
-                  if (vm.isLoadingMessages) {
-                    return const Center(
-                        child: CircularProgressIndicator(
-                            color: Colors.blueAccent));
-                  }
-                  if (vm.errorMessage != null && vm.activeMessages.isEmpty) {
-                    return Center(
+              )
+            : AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                leading: IconButton(
+                  onPressed: () {
+                    vm.clearActiveChat();
+                    Navigator.pop(context);
+                  },
+                  icon: Icon(Icons.arrow_back_ios_new_rounded,
+                      color: primaryTextColor),
+                ),
+                title: Row(
+                  children: [
+                    if (isGroup)
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor:
+                            Colors.orangeAccent.withValues(alpha: 0.2),
+                        child: const Icon(Icons.groups_rounded,
+                            size: 20, color: Colors.orangeAccent),
+                      )
+                    else
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundImage: widget.thread.avatarUrl != null
+                            ? NetworkImage(widget.thread.avatarUrl!)
+                            : null,
+                        backgroundColor:
+                            isDark ? Colors.white10 : Colors.blue.shade50,
+                        child: widget.thread.avatarUrl == null
+                            ? Text(
+                                _initials(widget.thread.contactName),
+                                style: const TextStyle(
+                                  color: Colors.blueAccent,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 13,
+                                ),
+                              )
+                            : null,
+                      ),
+                    const SizedBox(width: 12),
+                    Expanded(
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.error_outline_rounded,
-                              size: 48,
-                              color: primaryTextColor.withValues(alpha: 0.2)),
-                          const SizedBox(height: 16),
+                          Text(widget.thread.contactName,
+                              style: TextStyle(
+                                  color: primaryTextColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900)),
+                          Text(
+                              isGroup
+                                  ? AppLocalizations.of(context)!
+                                      .translate('class_tab_label')
+                                  : widget.thread.contactRole,
+                              style: TextStyle(
+                                  color: primaryTextColor
+                                      .withValues(alpha: 0.5),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+        body: DeepSpaceBackground(
+          showOrbs: false,
+          child: SafeArea(
+            child: Stack(
+              children: [
+                Column(
+                  children: [
+                    Expanded(
+                      child: Builder(builder: (context) {
+                        if (vm.isLoadingMessages) {
+                          return const Center(
+                              child: CircularProgressIndicator(
+                                  color: Colors.blueAccent));
+                        }
+                        if (vm.errorMessage != null &&
+                            vm.activeMessages.isEmpty) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.error_outline_rounded,
+                                    size: 48,
+                                    color: primaryTextColor
+                                        .withValues(alpha: 0.2)),
+                                const SizedBox(height: 16),
+                                Text(
+                                    AppLocalizations.of(context)!
+                                        .translate(vm.errorMessage!),
+                                    style: TextStyle(
+                                        color: primaryTextColor
+                                            .withValues(alpha: 0.5),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14)),
+                                const SizedBox(height: 16),
+                                TextButton(
+                                  onPressed: () =>
+                                      vm.fetchMessages(widget.thread.id),
+                                  child: Text(AppLocalizations.of(context)!
+                                      .translate('retry')),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        final messages = vm.activeMessages;
+                        if (messages.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'Démarrez la conversation…',
+                              style: TextStyle(
+                                  color: isDark
+                                      ? Colors.white24
+                                      : Colors.black26,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          );
+                        }
+                        return ListView.builder(
+                          controller: _scrollController,
+                          padding:
+                              const EdgeInsets.fromLTRB(16, 100, 16, 20),
+                          itemCount: messages.length,
+                          itemBuilder: (context, index) {
+                            final msg = messages[index];
+                            final prevMsg =
+                                index > 0 ? messages[index - 1] : null;
+
+                            Widget? dateSep;
+                            if (_shouldShowDateSeparator(msg, prevMsg)) {
+                              dateSep =
+                                  _buildDateSeparator(context, msg, isDark);
+                            }
+
+                            return Column(
+                              children: [
+                                if (dateSep != null) dateSep,
+                                _buildBubble(msg, isDark),
+                              ],
+                            );
+                          },
+                        );
+                      }),
+                    ),
+                    _buildInputBar(context, vm, isDark, primaryTextColor),
+                  ],
+                ),
+                // Recording overlay
+                if (_isRecording)
+                  Positioned(
+                    bottom: 100,
+                    left: 20,
+                    right: 20,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                              color:
+                                  Colors.redAccent.withValues(alpha: 0.3),
+                              blurRadius: 20)
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.mic_rounded, color: Colors.white)
+                              .animate(onPlay: (c) => c.repeat())
+                              .scale(
+                                  begin: const Offset(1, 1),
+                                  end: const Offset(1.2, 1.2),
+                                  duration:
+                                      const Duration(milliseconds: 600)),
+                          const SizedBox(width: 16),
                           Text(
                               AppLocalizations.of(context)!
-                                  .translate(vm.errorMessage!),
-                              style: TextStyle(
-                                  color:
-                                      primaryTextColor.withValues(alpha: 0.5),
+                                  .translate('audio_recording'),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
+                          const Spacer(),
+                          Text(_formatDuration(_recordingSeconds),
+                              style: const TextStyle(
+                                  color: Colors.white,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 14)),
-                          const SizedBox(height: 16),
-                          TextButton(
-                            onPressed: () => vm.fetchMessages(widget.thread.id),
-                            child: Text(AppLocalizations.of(context)!
-                                .translate('retry')),
+                                  fontFamily: 'monospace')),
+                          const SizedBox(width: 12),
+                          GestureDetector(
+                            onTap: _cancelRecording,
+                            child: const Icon(
+                                Icons.delete_outline_rounded,
+                                color: Colors.white,
+                                size: 20),
                           ),
                         ],
                       ),
-                    );
-                  }
-
-                  final messages = vm.activeMessages;
-                  return ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.fromLTRB(16, 120, 16, 20),
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = messages[index];
-                      final prevMsg = index > 0 ? messages[index - 1] : null;
-
-                      // Date separator logic
-                      Widget? dateSeparator;
-                      if (_shouldShowDateSeparator(msg, prevMsg)) {
-                        dateSeparator = _buildDateSeparator(context, msg);
-                      }
-
-                      return Column(
-                        children: [
-                          if (dateSeparator != null) dateSeparator,
-                          WhatsappBubble(
-                            message: msg,
-                            isGroup: isGroup,
-                            onEdit: msg.isMe
-                                ? () => _showEditDialog(context, vm, msg)
-                                : null,
-                            onDelete: msg.isMe
-                                ? () => _showDeleteConfirm(context, vm, msg)
-                                : null,
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
-              ),
+                    ).animate().fadeIn().slideY(begin: 0.5),
+                  ),
+              ],
             ),
-            Consumer<ChatViewModel>(
-              builder: (context, vm, _) => _buildInputBar(context, vm),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
+
+  // ── Bubble ──────────────────────────────────────────────────────────────────
+
+  Widget _buildBubble(ChatMessageModel msg, bool isDark) {
+    final isMe = msg.isMe;
+    final type = msg.type;
+    final isSelected = _selectedMessageIds.contains(msg.id);
+
+    return GestureDetector(
+      onLongPress: () => _toggleSelection(msg.id),
+      onTap: () {
+        if (_isSelectionMode) _toggleSelection(msg.id);
+      },
+      child: Container(
+        color: isSelected
+            ? Colors.blueAccent.withValues(alpha: 0.1)
+            : Colors.transparent,
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Align(
+          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            constraints: const BoxConstraints(maxWidth: 280),
+            padding: EdgeInsets.all(type == 'image' ? 4 : 12),
+            decoration: BoxDecoration(
+              color: isMe
+                  ? Colors.blueAccent
+                  : (isDark ? const Color(0xFF1E293B) : Colors.white),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: isMe
+                  ? []
+                  : [
+                      BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2))
+                    ],
+              border: isSelected
+                  ? Border.all(color: Colors.blueAccent, width: 2)
+                  : null,
+            ),
+            child: Column(
+              crossAxisAlignment:
+                  isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                if (type == 'voice' || type == 'audio') ...[
+                  AudioMessagePlayer(
+                    url: msg.attachments.isNotEmpty
+                        ? msg.attachments.first
+                        : '',
+                    isMe: isMe,
+                  ),
+                ] else if (type == 'image') ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      msg.attachments.isNotEmpty
+                          ? msg.attachments.first
+                          : '',
+                      width: 200,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.broken_image),
+                    ),
+                  ),
+                ] else if (type == 'document') ...[
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.description,
+                          color:
+                              isMe ? Colors.white : Colors.blueAccent),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          msg.content.isNotEmpty
+                              ? msg.content
+                              : (msg.attachments.isNotEmpty
+                                  ? msg.attachments.first
+                                      .split('/')
+                                      .last
+                                  : 'Document'),
+                          style: TextStyle(
+                              color: isMe || isDark
+                                  ? Colors.white
+                                  : Colors.black87,
+                              fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  Text(
+                    msg.content,
+                    style: TextStyle(
+                        color: isMe || isDark
+                            ? Colors.white
+                            : Colors.black87,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ],
+                const SizedBox(height: 4),
+                Text(
+                  msg.createdAt != null
+                      ? DateFormat('HH:mm').format(msg.createdAt!)
+                      : msg.time,
+                  style: TextStyle(
+                      color: (isMe || isDark ? Colors.white : Colors.black54)
+                          .withValues(alpha: 0.5),
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ).animate().fadeIn().slideX(begin: isMe ? 0.1 : -0.1),
+        ),
+      ),
+    );
+  }
+
+  // ── Date separator ───────────────────────────────────────────────────────────
 
   bool _shouldShowDateSeparator(
       ChatMessageModel current, ChatMessageModel? previous) {
@@ -921,8 +1167,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         currentDate.day != prevDate.day;
   }
 
-  Widget _buildDateSeparator(BuildContext context, ChatMessageModel msg) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildDateSeparator(
+      BuildContext context, ChatMessageModel msg, bool isDark) {
     final date = msg.createdAt ?? DateTime.now();
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -948,14 +1194,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       : Colors.black12)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: isDark ? Colors.white38 : Colors.black38,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            child: Text(label,
+                style: TextStyle(
+                    color: isDark ? Colors.white38 : Colors.black38,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700)),
           ),
           Expanded(
               child: Divider(
@@ -967,105 +1210,20 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
-  void _showEditDialog(
-      BuildContext context, ChatViewModel vm, ChatMessageModel msg) {
-    final editController = TextEditingController(text: msg.content);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(AppLocalizations.of(context)!.translate('edit_message')),
-        content: TextField(
-          controller: editController,
-          maxLines: 4,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText:
-                AppLocalizations.of(context)!.translate('input_message_hint'),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child:
-                Text(AppLocalizations.of(context)!.translate('cancel')),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final newContent = editController.text.trim();
-              if (newContent.isNotEmpty && newContent != msg.content) {
-                await vm.editMessage(msg.id, newContent);
-              }
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: Text(AppLocalizations.of(context)!.translate('save')),
-          ),
-        ],
-      ),
-    );
-  }
+  // ── Input bar ────────────────────────────────────────────────────────────────
 
-  void _showDeleteConfirm(
-      BuildContext context, ChatViewModel vm, ChatMessageModel msg) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title:
-            Text(AppLocalizations.of(context)!.translate('delete_message')),
-        content: Text(AppLocalizations.of(context)!
-            .translate('delete_message_confirm')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child:
-                Text(AppLocalizations.of(context)!.translate('cancel')),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () async {
-              await vm.deleteMessage(msg.id);
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child:
-                Text(AppLocalizations.of(context)!.translate('delete')),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _initials(String name) {
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return name.isNotEmpty ? name[0].toUpperCase() : '?';
-  }
-
-  bool get _isGroupChat => widget.thread.contactRole == 'GROUPE';
-
-  Widget _buildInputBar(BuildContext context, ChatViewModel vm) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryTextColor = isDark ? Colors.white : const Color(0xFF0F172A);
-
-    final bool readOnly = _isGroupChat || !vm.canReply;
+  Widget _buildInputBar(BuildContext context, ChatViewModel vm, bool isDark,
+      Color primaryTextColor) {
+    final bool readOnly = widget.thread.contactRole == 'GROUPE' || !vm.canReply;
 
     if (readOnly) {
-      final String notice =
-          AppLocalizations.of(context)!.translate('admin_only_banner_msg');
-
       return Container(
-        margin: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.black.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(40),
-          border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : Colors.black12),
+          color: isDark ? const Color(0xFF0F172A) : Colors.white,
+          border: Border(
+              top: BorderSide(
+                  color: isDark ? Colors.white10 : Colors.black12)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1076,7 +1234,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             const SizedBox(width: 8),
             Flexible(
               child: Text(
-                notice,
+                AppLocalizations.of(context)!
+                    .translate('admin_only_banner_msg'),
                 style: TextStyle(
                     color: primaryTextColor.withValues(alpha: 0.4),
                     fontSize: 13,
@@ -1092,19 +1251,24 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Attachment preview
+        // Attachment preview pill
         if (_pendingFilePath != null && _pendingType != 'voice')
           Container(
-            margin: const EdgeInsets.fromLTRB(24, 0, 24, 6),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.blue.shade50,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.blue.shade50,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
               children: [
                 Icon(
-                  _pendingType == 'image' ? Icons.image_rounded : Icons.attach_file_rounded,
+                  _pendingType == 'image'
+                      ? Icons.image_rounded
+                      : Icons.attach_file_rounded,
                   color: Colors.blueAccent,
                   size: 20,
                 ),
@@ -1112,106 +1276,99 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 Expanded(
                   child: Text(
                     _pendingFileName ?? '',
-                    style: TextStyle(color: primaryTextColor, fontSize: 13),
+                    style:
+                        TextStyle(color: primaryTextColor, fontSize: 13),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 GestureDetector(
                   onTap: _clearPending,
-                  child: const Icon(Icons.close_rounded, size: 18, color: Colors.redAccent),
+                  child: const Icon(Icons.close_rounded,
+                      size: 18, color: Colors.redAccent),
                 ),
               ],
             ),
           ),
 
-        // Recording indicator
-        if (_isRecording)
-          Container(
-            margin: const EdgeInsets.fromLTRB(24, 0, 24, 6),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.mic, color: Colors.redAccent, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  'Recording... ${_recordDuration.inMinutes.toString().padLeft(2, '0')}:${(_recordDuration.inSeconds % 60).toString().padLeft(2, '0')}',
-                  style: const TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: _cancelRecording,
-                  child: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                ),
-              ],
-            ),
-          ),
-
-        // Input bar
+        // Main input row — matches teacher _buildInput style
         Container(
-          margin: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
-            borderRadius: BorderRadius.circular(40),
-            border: Border.all(
-                color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black12),
+            color: isDark ? const Color(0xFF0F172A) : Colors.white,
+            border: Border(
+                top: BorderSide(
+                    color: isDark ? Colors.white10 : Colors.white)),
           ),
           child: Row(
             children: [
-              // Attach button
               IconButton(
+                icon: Icon(Icons.add_circle_outline_rounded,
+                    color:
+                        isDark ? Colors.white38 : Colors.black38),
                 onPressed: () => _showAttachMenu(context),
-                icon: Icon(Icons.attach_file_rounded,
-                    color: primaryTextColor.withValues(alpha: 0.5), size: 22),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               ),
-              // Text field
               Expanded(
-                child: TextField(
-                  controller: _controller,
-                  style: TextStyle(color: primaryTextColor),
-                  decoration: InputDecoration(
-                    hintText: AppLocalizations.of(context)!.translate('input_message_hint'),
-                    hintStyle: TextStyle(color: primaryTextColor.withValues(alpha: 0.4)),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.white.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                        color:
+                            isDark ? Colors.white10 : Colors.white),
+                  ),
+                  child: TextField(
+                    controller: _controller,
+                    style: TextStyle(
+                        color: primaryTextColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(context)!
+                          .translate('input_message_hint'),
+                      hintStyle: TextStyle(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.3)
+                              : Colors.black.withValues(alpha: 0.3)),
+                      border: InputBorder.none,
+                    ),
                   ),
                 ),
               ),
-              // Send / mic button
-              if (_isWriting || _pendingFilePath != null)
-                IconButton(
-                  onPressed: _pendingFilePath != null ? _sendPending : _sendMessage,
-                  icon: const Icon(Icons.send_rounded, color: Colors.blueAccent),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                )
-              else if (_isRecording)
+              const SizedBox(width: 8),
+              if (_isRecording)
                 IconButton(
                   onPressed: _stopRecording,
-                  icon: const Icon(Icons.stop_circle_rounded, color: Colors.redAccent, size: 28),
+                  icon: const Icon(Icons.stop_circle_rounded,
+                      color: Colors.redAccent, size: 28),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  constraints:
+                      const BoxConstraints(minWidth: 36, minHeight: 36),
+                )
+              else if (_isWriting || _pendingFilePath != null)
+                IconButton(
+                  icon: const Icon(Icons.send_rounded,
+                      color: Colors.blueAccent),
+                  onPressed: _pendingFilePath != null
+                      ? _sendPending
+                      : _sendMessage,
                 )
               else
                 GestureDetector(
                   onTap: _startRecording,
                   child: Container(
-                    width: 36, height: 36,
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.blueAccent.withValues(alpha: 0.15),
+                      color:
+                          Colors.blueAccent.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.mic_rounded, color: Colors.blueAccent, size: 20),
+                    child: const Icon(Icons.mic_rounded,
+                        color: Colors.blueAccent, size: 24),
                   ),
                 ),
-              const SizedBox(width: 4),
             ],
           ),
         ),
@@ -1222,48 +1379,82 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   void _showAttachMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF1E293B)
-          : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _attachOption(
-                icon: Icons.image_rounded,
-                label: 'Photo',
-                color: Colors.green,
-                onTap: () { Navigator.pop(context); _pickImage(); },
-              ),
-              _attachOption(
-                icon: Icons.insert_drive_file_rounded,
-                label: 'File',
-                color: Colors.blueAccent,
-                onTap: () { Navigator.pop(context); _pickFile(); },
-              ),
-              _attachOption(
-                icon: Icons.camera_alt_rounded,
-                label: 'Camera',
-                color: Colors.orange,
-                onTap: () async {
-                  Navigator.pop(context);
-                  final picked = await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 80);
-                  if (picked == null) return;
-                  setState(() {
-                    _pendingFilePath = picked.path;
-                    _pendingFileName = picked.name;
-                    _pendingMimeType = 'image/jpeg';
-                    _pendingType = 'image';
-                  });
-                },
-              ),
-            ],
-          ),
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1E293B)
+              : Colors.white,
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white24
+                        : Colors.black12,
+                    borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _attachOption(
+                  icon: Icons.photo_library_rounded,
+                  label: AppLocalizations.of(context)!
+                      .translate('camera_roll'),
+                  color: Colors.purpleAccent,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage();
+                  },
+                ),
+                _attachOption(
+                  icon: Icons.camera_alt_rounded,
+                  label: AppLocalizations.of(context)!
+                      .translate('selfie'),
+                  color: Colors.blueAccent,
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final picked = await ImagePicker().pickImage(
+                        source: ImageSource.camera, imageQuality: 80);
+                    if (picked == null) return;
+                    setState(() {
+                      _pendingFilePath = picked.path;
+                      _pendingFileName = picked.name;
+                      _pendingMimeType = 'image/jpeg';
+                      _pendingType = 'image';
+                    });
+                  },
+                ),
+                _attachOption(
+                  icon: Icons.picture_as_pdf_rounded,
+                  label: AppLocalizations.of(context)!
+                      .translate('pdf_label'),
+                  color: Colors.redAccent,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickFile();
+                  },
+                ),
+                _attachOption(
+                  icon: Icons.attach_file_rounded,
+                  label: 'Fichier',
+                  color: Colors.orangeAccent,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickFile();
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+          ],
         ),
       ),
     );
@@ -1281,18 +1472,31 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 56, height: 56,
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 28),
+                color: color.withValues(alpha: 0.1),
+                shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(height: 6),
-          Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 10,
+                  color: color,
+                  fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
         ],
       ),
     );
   }
-}
 
+  String _initials(String name) {
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name.isNotEmpty ? name[0].toUpperCase() : '?';
+  }
+}

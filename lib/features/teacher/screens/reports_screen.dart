@@ -1,6 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
@@ -593,6 +599,145 @@ class _ReportsScreenState extends State<ReportsScreen> {
         .slideX(begin: isTop ? -0.05 : 0.05);
   }
 
+  Future<void> _exportPdf(BuildContext context) async {
+    Navigator.pop(context);
+    try {
+      final font = await PdfGoogleFonts.cairoRegular();
+      final fontBold = await PdfGoogleFonts.cairoBold();
+      final doc = pw.Document();
+      final className = _selectedClass?.name ?? '';
+      final date = DateTime.now();
+      final dateStr =
+          '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+      final classAvg =
+          (_stats['classAverage'] as num?)?.toStringAsFixed(2) ?? '—';
+      final attendance =
+          (_stats['attendanceRate'] as num?)?.toStringAsFixed(1) ?? '—';
+      final success =
+          (_stats['successRate'] as num?)?.toStringAsFixed(1) ?? '—';
+
+      doc.addPage(pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        theme: pw.ThemeData.withFont(base: font, bold: fontBold),
+        build: (ctx) => [
+          pw.Text('Class Report — $className',
+              style: pw.TextStyle(font: fontBold, fontSize: 20)),
+          pw.SizedBox(height: 4),
+          pw.Text('Date: $dateStr',
+              style: pw.TextStyle(font: font, fontSize: 11, color: PdfColors.grey600)),
+          pw.SizedBox(height: 16),
+          pw.Row(children: [
+            _pdfStatBox(fontBold, 'Average', '$classAvg/20'),
+            pw.SizedBox(width: 8),
+            _pdfStatBox(fontBold, 'Attendance', '$attendance%'),
+            pw.SizedBox(width: 8),
+            _pdfStatBox(fontBold, 'Success', '$success%'),
+          ]),
+          pw.SizedBox(height: 20),
+          pw.Text('Student Results',
+              style: pw.TextStyle(font: fontBold, fontSize: 14)),
+          pw.SizedBox(height: 8),
+          pw.Table(
+            border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+            columnWidths: {
+              0: const pw.FlexColumnWidth(3),
+              1: const pw.FlexColumnWidth(1.5),
+              2: const pw.FlexColumnWidth(1.5),
+            },
+            children: [
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.blue50),
+                children: [
+                  _pdfCell(fontBold, 'Name', isHeader: true),
+                  _pdfCell(fontBold, 'Average', isHeader: true),
+                  _pdfCell(fontBold, 'Attendance', isHeader: true),
+                ],
+              ),
+              ..._students.map((s) => pw.TableRow(children: [
+                    _pdfCell(font, s.name),
+                    _pdfCell(font, '${s.average.toStringAsFixed(1)}/20'),
+                    _pdfCell(font,
+                        s.attendanceRate != null ? '${s.attendanceRate!.toStringAsFixed(1)}%' : '—'),
+                  ])),
+            ],
+          ),
+        ],
+      ));
+
+      await Printing.layoutPdf(onLayout: (_) async => doc.save());
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('PDF export failed: $e')));
+      }
+    }
+  }
+
+  pw.Widget _pdfStatBox(pw.Font bold, String label, String value) =>
+      pw.Expanded(
+        child: pw.Container(
+          padding: const pw.EdgeInsets.all(10),
+          decoration: pw.BoxDecoration(
+              color: PdfColors.blue50,
+              borderRadius: pw.BorderRadius.circular(8)),
+          child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                pw.Text(value,
+                    style: pw.TextStyle(font: bold, fontSize: 16)),
+                pw.SizedBox(height: 2),
+                pw.Text(label,
+                    style: pw.TextStyle(
+                        fontSize: 9, color: PdfColors.grey600)),
+              ]),
+        ),
+      );
+
+  pw.Widget _pdfCell(pw.Font font, String text, {bool isHeader = false}) =>
+      pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: pw.Text(text,
+            style: pw.TextStyle(
+                font: font,
+                fontSize: isHeader ? 11 : 10,
+                color: isHeader ? PdfColors.blue800 : PdfColors.black)),
+      );
+
+  Future<void> _exportCsv(BuildContext context) async {
+    Navigator.pop(context);
+    try {
+      final className = (_selectedClass?.name ?? 'class').replaceAll(' ', '_');
+      final classAvg =
+          (_stats['classAverage'] as num?)?.toStringAsFixed(2) ?? '';
+      final attendance =
+          (_stats['attendanceRate'] as num?)?.toStringAsFixed(1) ?? '';
+      final success =
+          (_stats['successRate'] as num?)?.toStringAsFixed(1) ?? '';
+
+      final lines = <String>[
+        'Class Report,${_selectedClass?.name ?? ''}',
+        'Date,${DateTime.now().toIso8601String().substring(0, 10)}',
+        'Class Average,$classAvg',
+        'Attendance Rate,$attendance%',
+        'Success Rate,$success%',
+        '',
+        'Name,Average,Attendance Rate',
+        ..._students.map((s) =>
+            '"${s.name}",${s.average.toStringAsFixed(1)},${s.attendanceRate != null ? '${s.attendanceRate!.toStringAsFixed(1)}%' : ''}'),
+      ];
+
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/report_$className.csv');
+      await file.writeAsString(lines.join('\n'), encoding: const SystemEncoding());
+      await OpenFilex.open(file.path);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('CSV export failed: $e')));
+      }
+    }
+  }
+
   void _showExportOptions(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
@@ -625,12 +770,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 context,
                 Icons.picture_as_pdf_rounded,
                 AppLocalizations.of(context)!.translate('pdf_format'),
-                Colors.redAccent),
+                Colors.redAccent,
+                () => _exportPdf(context)),
             _buildExportTile(
                 context,
                 Icons.table_view_rounded,
                 AppLocalizations.of(context)!.translate('excel_format'),
-                Colors.greenAccent),
+                Colors.greenAccent,
+                () => _exportCsv(context)),
             const SizedBox(height: 32),
           ],
         ),
@@ -639,7 +786,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildExportTile(
-      BuildContext context, IconData icon, String label, Color color) {
+      BuildContext context, IconData icon, String label, Color color, VoidCallback onTap) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryTextColor = isDark ? Colors.white : const Color(0xFF0F172A);
     return Container(
@@ -666,7 +813,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 color: primaryTextColor)),
         trailing: Icon(Icons.chevron_right_rounded,
             color: isDark ? Colors.white24 : Colors.black26, size: 20),
-        onTap: () {},
+        onTap: onTap,
       ),
     );
   }

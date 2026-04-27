@@ -479,9 +479,11 @@ class _AddHomeworkScreenState extends State<AddHomeworkScreen> {
     if (result == null || result.files.isEmpty) return;
     final file = result.files.first;
     if (file.path == null) return;
+    final rawName = file.name.isNotEmpty ? file.name : file.path!;
+    final cleanName = rawName.contains('/') ? rawName.split('/').last : rawName;
     setState(() {
       _attachedFilePath = file.path;
-      _attachedFileName = file.name;
+      _attachedFileName = cleanName;
     });
   }
 

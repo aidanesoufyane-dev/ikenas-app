@@ -142,12 +142,20 @@ class ApiService {
     if (newToken != null) setToken(newToken);
   }
 
-  // No generic profile-update endpoint exists on this backend.
-  // Callers that need to update fields should use updatePassword or
-  // contact the admin-side staff/student routes.
+  /// PUT /auth/profile — update phone and/or avatarIndex
   Future<UserModel> updateProfile(Map<String, dynamic> data) async {
-    // Graceful degradation: return current profile unchanged.
-    debugPrint('[API] updateProfile: no generic profile-update endpoint – returning current profile');
+    try {
+      final response = await _dio.put('/auth/profile', data: data);
+      if (response.statusCode == 200) {
+        final raw = response.data;
+        final userMap = (raw is Map && raw['data'] != null)
+            ? raw['data'] as Map<String, dynamic>
+            : (raw is Map<String, dynamic> ? raw : <String, dynamic>{});
+        return UserModel.fromJson(userMap);
+      }
+    } catch (e) {
+      debugPrint('[API] updateProfile error: $e');
+    }
     return getProfile();
   }
 

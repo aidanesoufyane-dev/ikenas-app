@@ -104,6 +104,15 @@ class _TeacherHomeworkScreenState extends State<TeacherHomeworkScreen> {
     );
   }
 
+  String _formatDate(String raw) {
+    try {
+      final dt = DateTime.parse(raw);
+      return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return raw.length > 10 ? raw.substring(0, 10) : raw;
+    }
+  }
+
   Widget _buildHomeworkCard(BuildContext context, HomeworkModel hw, int index) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryTextColor = isDark ? Colors.white : const Color(0xFF0F172A);
@@ -157,7 +166,7 @@ class _TeacherHomeworkScreenState extends State<TeacherHomeworkScreen> {
                       ),
                     ),
                     Text(
-                      '${AppLocalizations.of(context)!.translate('due_date')}: ${hw.dueDate}',
+                      '${AppLocalizations.of(context)!.translate('due_date')}: ${_formatDate(hw.dueDate)}',
                       style: TextStyle(
                           color: secondaryTextColor,
                           fontSize: 11,

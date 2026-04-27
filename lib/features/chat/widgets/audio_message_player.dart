@@ -33,6 +33,19 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
         });
       }
     });
+    // pre-load metadata so duration shows before first play
+    Future.microtask(() async {
+      try {
+        final src = widget.url.startsWith('http')
+            ? UrlSource(widget.url) as Source
+            : DeviceFileSource(widget.url) as Source;
+        await _audioPlayer.setSource(src);
+        final dur = await _audioPlayer.getDuration();
+        if (dur != null && mounted) {
+          setState(() => _duration = dur);
+        }
+      } catch (_) {}
+    });
 
     _audioPlayer.onDurationChanged.listen((newDuration) {
       if (mounted) {

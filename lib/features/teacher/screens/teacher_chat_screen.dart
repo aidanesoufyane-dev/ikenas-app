@@ -1235,11 +1235,23 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (result == null || result.files.isEmpty) return;
     final file = result.files.first;
     if (file.path == null) return;
+    final ext = (file.extension ?? '').toLowerCase();
+    String mime = 'application/octet-stream';
+    if (['jpg', 'jpeg'].contains(ext)) { mime = 'image/jpeg'; }
+    else if (ext == 'png') { mime = 'image/png'; }
+    else if (ext == 'gif') { mime = 'image/gif'; }
+    else if (ext == 'pdf') { mime = 'application/pdf'; }
+    else if (['doc', 'docx'].contains(ext)) { mime = 'application/msword'; }
+    else if (['xls', 'xlsx'].contains(ext)) { mime = 'application/vnd.ms-excel'; }
+    else if (['ppt', 'pptx'].contains(ext)) { mime = 'application/vnd.ms-powerpoint'; }
+    else if (ext == 'txt') { mime = 'text/plain'; }
+    else if (['mp4', 'mov'].contains(ext)) { mime = 'video/mp4'; }
+    final isImage = ['jpg', 'jpeg', 'png', 'gif'].contains(ext);
     setState(() {
       _pendingFilePath = file.path;
       _pendingFileName = file.name;
-      _pendingMimeType = 'application/octet-stream';
-      _pendingType = 'document';
+      _pendingMimeType = mime;
+      _pendingType = isImage ? 'image' : 'document';
     });
   }
 

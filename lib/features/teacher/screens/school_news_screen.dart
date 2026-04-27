@@ -707,7 +707,7 @@ class _SchoolNewsScreenState extends State<SchoolNewsScreen> {
                     icon: post.isLiked
                         ? Icons.favorite_rounded
                         : Icons.favorite_border_rounded,
-                    label: AppLocalizations.of(context)!.translate('like_btn'),
+                    label: AppLocalizations.of(context)!.translate('btn_like'),
                     color: post.isLiked ? Colors.redAccent : primaryTextColor,
                     onTap: () => _toggleLike(post.id),
                     isDark: isDark,
