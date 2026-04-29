@@ -1826,7 +1826,45 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       }(),
                       width: 200,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+                      loadingBuilder: (ctx, child, progress) {
+                        if (progress == null) return child;
+                        return SizedBox(
+                          width: 200,
+                          height: 120,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              value: progress.expectedTotalBytes != null
+                                  ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                                  : null,
+                              strokeWidth: 2,
+                              color: isMe ? Colors.white70 : Colors.blueAccent,
+                            ),
+                          ),
+                        );
+                      },
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 200,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          color: isMe
+                              ? Colors.white.withValues(alpha: 0.15)
+                              : Colors.black.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.broken_image_rounded,
+                                size: 36,
+                                color: isMe ? Colors.white60 : Colors.black38),
+                            const SizedBox(height: 6),
+                            Text('Image unavailable',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: isMe ? Colors.white60 : Colors.black38)),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ] else if (type == 'document') ...[

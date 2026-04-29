@@ -34,18 +34,25 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
       }
     });
     // pre-load metadata so duration shows before first play
-    Future.microtask(() async {
-      try {
-        final src = widget.url.startsWith('http')
-            ? UrlSource(widget.url) as Source
-            : DeviceFileSource(widget.url) as Source;
-        await _audioPlayer.setSource(src);
-        final dur = await _audioPlayer.getDuration();
-        if (dur != null && mounted) {
-          setState(() => _duration = dur);
-        }
-      } catch (_) {}
-    });
+    if (widget.url.isNotEmpty) {
+      Future.microtask(() async {
+        try {
+          final src = widget.url.startsWith('http')
+              ? UrlSource(widget.url) as Source
+              : DeviceFileSource(widget.url) as Source;
+          await _audioPlayer.setSource(src);
+          // getDuration() may return null immediately on Android — poll until ready
+          for (int i = 0; i < 10; i++) {
+            await Future.delayed(const Duration(milliseconds: 200));
+            final dur = await _audioPlayer.getDuration();
+            if (dur != null && dur > Duration.zero) {
+              if (mounted) setState(() => _duration = dur);
+              break;
+            }
+          }
+        } catch (_) {}
+      });
+    }
 
     _audioPlayer.onDurationChanged.listen((newDuration) {
       if (mounted) {
