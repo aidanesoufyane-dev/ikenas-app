@@ -13,7 +13,7 @@ class AppConfig {
   ///   flutter run --dart-define=API_BASE_URL=http://192.168.1.5:5000/api
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://ikenas-api.onrender.com/api',
+    defaultValue: 'https://ikenas-api-v2.onrender.com/api',
   );
 
   /// Server root (no trailing /api). Use this wherever code constructs its
