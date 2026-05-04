@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/models/models.dart';
 import '../../../core/widgets/deep_space_background.dart';
+import '../../../core/widgets/sprite_avatar.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/services/api_service.dart';
 import 'student_detail_full_screen.dart';
@@ -318,12 +319,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
               shape: BoxShape.circle,
               border:
                   Border.all(color: primaryTextColor.withValues(alpha: 0.1))),
-          child: CircleAvatar(
-            radius: 20,
-            backgroundImage:
-                NetworkImage('https://i.pravatar.cc/150?u=${student.id}'),
-            backgroundColor: isDark ? Colors.white10 : Colors.white,
-          ),
+          child: SpriteAvatar(gender: student.gender, size: 40),
         ),
         title: Text(student.name,
             style: TextStyle(

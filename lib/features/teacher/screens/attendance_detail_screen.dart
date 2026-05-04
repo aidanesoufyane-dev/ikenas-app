@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../core/widgets/deep_space_background.dart';
+import '../../../core/widgets/sprite_avatar.dart';
 
 class AttendanceDetailScreen extends StatefulWidget {
   final Map<String, dynamic> sessionData;
@@ -165,12 +166,7 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundImage:
-                NetworkImage('https://i.pravatar.cc/150?u=${student.id}'),
-            backgroundColor: isDark ? Colors.white10 : Colors.black12,
-          ),
+          SpriteAvatar(gender: student.gender as String?, size: 36),
           const SizedBox(width: 14),
           Expanded(
             child: Text(student.name,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/models/models.dart';
 import '../../../core/widgets/deep_space_background.dart';
+import '../../../core/widgets/sprite_avatar.dart';
 import '../../../core/localization/app_localizations.dart';
 import 'teacher_chat_screen.dart';
 
@@ -63,12 +64,7 @@ class StudentDetailFullScreen extends StatelessWidget {
                                 blurRadius: 40)
                         ],
                       ),
-                      child: CircleAvatar(
-                        radius: 56,
-                        backgroundColor: isDark ? Colors.white10 : Colors.white,
-                        backgroundImage: NetworkImage(
-                            'https://i.pravatar.cc/150?u=${student.id}'),
-                      ),
+                      child: SpriteAvatar(gender: student.gender, size: 112),
                     ).animate().scale(
                         delay: 100.ms,
                         duration: 600.ms,
@@ -265,8 +261,7 @@ class StudentDetailFullScreen extends StatelessWidget {
                                 builder: (_) => ChatDetailScreen(
                                   name:
                                       "${loc.translate('parent_of')} ${student.name}",
-                                  avatarUrl:
-                                      'https://i.pravatar.cc/150?u=${student.id}',
+                                  avatarUrl: '',
                                 ),
                               ),
                             );

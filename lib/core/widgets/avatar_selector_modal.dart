@@ -11,9 +11,6 @@ class AvatarSelectorModal {
     final primaryTextColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final secondaryTextColor = isDark ? Colors.white54 : Colors.black54;
 
-    // All 28 individual avatars
-    final allIndices = List.generate(28, (i) => i);
-
     int? selectedIndex = initialIndex;
 
     showModalBottomSheet(
@@ -23,8 +20,7 @@ class AvatarSelectorModal {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) => Container(
-            height: MediaQuery.of(context).size.height * 0.75,
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF0F172A) : Colors.white,
               borderRadius:
@@ -38,6 +34,7 @@ class AvatarSelectorModal {
               ],
             ),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 // Drag handle
                 Center(
@@ -52,7 +49,7 @@ class AvatarSelectorModal {
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
 
                 // Header
                 Row(
@@ -84,7 +81,7 @@ class AvatarSelectorModal {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Sélectionnez votre photo de profil',
+                            'Sélectionnez votre genre',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -97,119 +94,136 @@ class AvatarSelectorModal {
                   ],
                 ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.1),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: 40),
 
-                // Divider
-                Container(
-                  height: 1,
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.06)
-                      : Colors.black.withValues(alpha: 0.04),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Grid
-                Expanded(
-                  child: GridView.builder(
-                    physics: const BouncingScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4,
-                      crossAxisSpacing: 14,
-                      mainAxisSpacing: 14,
+                // Two avatar choices: 0=female, 1=male
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildChoice(
+                      context: context,
+                      setState: setState,
+                      index: 0,
+                      label: 'Féminin',
+                      selectedIndex: selectedIndex,
+                      isDark: isDark,
+                      primaryTextColor: primaryTextColor,
+                      onSelect: onSelect,
+                      onChanged: (i) => selectedIndex = i,
                     ),
-                    itemCount: allIndices.length,
-                    itemBuilder: (context, i) {
-                      final currentVm = context.watch<ProfileViewModel>();
+                    const SizedBox(width: 32),
+                    _buildChoice(
+                      context: context,
+                      setState: setState,
+                      index: 1,
+                      label: 'Masculin',
+                      selectedIndex: selectedIndex,
+                      isDark: isDark,
+                      primaryTextColor: primaryTextColor,
+                      onSelect: onSelect,
+                      onChanged: (i) => selectedIndex = i,
+                    ),
+                  ],
+                ).animate().fadeIn(delay: 150.ms).scale(
+                    begin: const Offset(0.9, 0.9),
+                    curve: Curves.easeOutBack),
 
-                      // Highlight logic:
-                      // 1. If we have a selectedIndex (staged flow), use it.
-                      // 2. Otherwise, fallback to the saved avatar index.
-                      final isSelected = selectedIndex != null
-                          ? (selectedIndex == allIndices[i])
-                          : (currentVm.user?.avatarIndex == allIndices[i]);
-
-                      return GestureDetector(
-                        onTap: () {
-                          if (onSelect != null) {
-                            onSelect(allIndices[i]);
-                            Navigator.pop(context);
-                          } else {
-                            context
-                                .read<ProfileViewModel>()
-                                .updateProfile(avatarIndex: allIndices[i]);
-                            Navigator.pop(context);
-                          }
-                        },
-                        child: AnimatedContainer(
-                          duration: 200.ms,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: isSelected
-                                  ? Colors.blueAccent
-                                  : (isDark
-                                      ? Colors.white.withValues(alpha: 0.06)
-                                      : Colors.black.withValues(alpha: 0.06)),
-                              width: isSelected ? 3 : 1.5,
-                            ),
-                            color: isDark
-                                ? Colors.white
-                                    .withValues(alpha: isSelected ? 0.08 : 0.03)
-                                : (isSelected
-                                    ? Colors.blue.withValues(alpha: 0.05)
-                                    : Colors.grey.withValues(alpha: 0.04)),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: Colors.blueAccent
-                                          .withValues(alpha: 0.25),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          padding: const EdgeInsets.all(4),
-                          child: Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(20),
-                                child: SpriteAvatar(
-                                    index: allIndices[i], size: 80),
-                              ),
-                              if (isSelected)
-                                Positioned(
-                                  bottom: 0,
-                                  right: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.blueAccent,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(Icons.check_rounded,
-                                        color: Colors.white, size: 12),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      )
-                          .animate()
-                          .fadeIn(delay: (i * 40).ms, duration: 400.ms)
-                          .scale(
-                              begin: const Offset(0.8, 0.8),
-                              curve: Curves.easeOutBack);
-                    },
-                  ),
-                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  static Widget _buildChoice({
+    required BuildContext context,
+    required StateSetter setState,
+    required int index,
+    required String label,
+    required int? selectedIndex,
+    required bool isDark,
+    required Color primaryTextColor,
+    required Function(int)? onSelect,
+    required Function(int) onChanged,
+  }) {
+    final isSelected = selectedIndex == index;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() => onChanged(index));
+        if (onSelect != null) {
+          onSelect(index);
+        } else {
+          context
+              .read<ProfileViewModel>()
+              .updateProfile(avatarIndex: index);
+        }
+        Navigator.pop(context);
+      },
+      child: AnimatedContainer(
+        duration: 200.ms,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(
+            color: isSelected
+                ? Colors.blueAccent
+                : (isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.black.withValues(alpha: 0.08)),
+            width: isSelected ? 3 : 1.5,
+          ),
+          color: isSelected
+              ? Colors.blueAccent.withValues(alpha: isDark ? 0.15 : 0.06)
+              : (isDark
+                  ? Colors.white.withValues(alpha: 0.03)
+                  : Colors.grey.withValues(alpha: 0.04)),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.blueAccent.withValues(alpha: 0.25),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          children: [
+            SpriteAvatar(index: index, size: 100),
+            const SizedBox(height: 14),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 14,
+                color: isSelected ? Colors.blueAccent : primaryTextColor,
+                letterSpacing: 0.3,
+              ),
+            ),
+            if (isSelected) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  '✓ Sélectionné',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

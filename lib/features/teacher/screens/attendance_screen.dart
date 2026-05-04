@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/widgets/deep_space_background.dart';
+import '../../../core/widgets/sprite_avatar.dart';
 import '../../../core/localization/app_localizations.dart';
 import './attendance_history_screen.dart';
 
@@ -588,12 +589,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               border:
                   Border.all(color: primaryTextColor.withValues(alpha: 0.1)),
             ),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundImage:
-                  NetworkImage('https://i.pravatar.cc/150?u=${student.id}'),
-              backgroundColor: secondaryTextColor,
-            ),
+            child: SpriteAvatar(gender: student.gender, size: 36),
           ),
           const SizedBox(width: 14),
           Expanded(

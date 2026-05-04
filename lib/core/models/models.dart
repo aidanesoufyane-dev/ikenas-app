@@ -30,6 +30,7 @@ class UserModel {
   final List<String> childrenIds; // for parent
   final List<String> classIds; // for teacher
   final String? schoolName;
+  final String? gender; // 'M' or 'F' from backend
 
   UserModel({
     required this.id,
@@ -42,6 +43,7 @@ class UserModel {
     this.childrenIds = const [],
     this.classIds = const [],
     this.schoolName,
+    this.gender,
   });
 
   UserModel copyWith({
@@ -55,6 +57,7 @@ class UserModel {
     List<String>? childrenIds,
     List<String>? classIds,
     String? schoolName,
+    String? gender,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -67,6 +70,7 @@ class UserModel {
       childrenIds: childrenIds ?? this.childrenIds,
       classIds: classIds ?? this.classIds,
       schoolName: schoolName ?? this.schoolName,
+      gender: gender ?? this.gender,
     );
   }
 
@@ -82,6 +86,7 @@ class UserModel {
       childrenIds: List<String>.from(json['childrenIds'] ?? []),
       classIds: List<String>.from(json['classIds'] ?? []),
       schoolName: json['schoolName'],
+      gender: json['gender']?.toString(),
     );
   }
 
@@ -97,6 +102,7 @@ class UserModel {
       'childrenIds': childrenIds,
       'classIds': classIds,
       'schoolName': schoolName,
+      'gender': gender,
     };
   }
 }
@@ -1570,6 +1576,7 @@ class StudentModel {
   final String? className;
   final String? group;
   final String? avatarUrl;
+  final String? gender; // 'M' or 'F' from backend
 
   StudentModel({
     required this.id,
@@ -1585,6 +1592,7 @@ class StudentModel {
     this.className,
     this.group,
     this.avatarUrl,
+    this.gender,
   });
 
   factory StudentModel.fromJson(Map<String, dynamic> json) {
@@ -1597,6 +1605,11 @@ class StudentModel {
     String className = json['className'] ?? '';
     if (json['classe'] is Map) {
       className = json['classe']['name'] ?? className;
+    }
+
+    String? gender = json['gender']?.toString();
+    if (gender == null && json['user'] is Map) {
+      gender = json['user']['gender']?.toString();
     }
 
     return StudentModel(
@@ -1613,6 +1626,7 @@ class StudentModel {
       className: className,
       group: json['group'],
       avatarUrl: processImageUrl(json['avatarUrl'] ?? json['avatar']),
+      gender: gender,
     );
   }
 
@@ -1631,6 +1645,7 @@ class StudentModel {
       'className': className,
       'group': group,
       'avatarUrl': avatarUrl,
+      'gender': gender,
     };
   }
 }

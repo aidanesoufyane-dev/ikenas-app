@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import '../../../core/widgets/deep_space_background.dart';
+import '../../../core/widgets/sprite_avatar.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/models/models.dart';
 import '../viewmodels/behavior_view_model.dart';
@@ -411,8 +412,7 @@ class _BehaviorScreenState extends State<BehaviorScreen> {
         appreciation?['teacher_name'] ?? loc.translate('teacher');
     final teacherRole =
         appreciation?['teacher_role'] ?? loc.translate('main_teacher');
-    final teacherAvatar = appreciation?['teacher_avatar'] ??
-        'https://i.pravatar.cc/150?u=teacher';
+    final teacherAvatar = appreciation?['teacher_avatar'];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -643,10 +643,11 @@ class _BehaviorScreenState extends State<BehaviorScreen> {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      CircleAvatar(
-                          radius: 10,
-                          backgroundImage: NetworkImage(teacherAvatar ??
-                              'https://i.pravatar.cc/150?u=$teacher')),
+                      teacherAvatar != null
+                          ? CircleAvatar(
+                              radius: 10,
+                              backgroundImage: NetworkImage(teacherAvatar))
+                          : SpriteAvatar(size: 20),
                       const SizedBox(width: 8),
                       Text(teacher,
                           style: TextStyle(

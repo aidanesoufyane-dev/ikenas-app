@@ -348,7 +348,7 @@ class _TeacherChatScreenState extends State<TeacherChatScreen>
               MaterialPageRoute(
                 builder: (_) => ChatDetailScreen(
                   name: conv.partnerName,
-                  avatarUrl: 'https://i.pravatar.cc/150?u=${conv.partnerId}',
+                  avatarUrl: '',
                   targetUserId: conv.partnerId,
                 ),
               ),
@@ -828,7 +828,7 @@ class _NewChatSearchScreenState extends State<NewChatSearchScreen> {
                             MaterialPageRoute(
                               builder: (_) => ChatDetailScreen(
                                 name: name,
-                                avatarUrl: 'https://i.pravatar.cc/150?u=$id',
+                                avatarUrl: '',
                                 targetUserId: id,
                               ),
                             ),

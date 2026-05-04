@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Avatar boy preset">
+  <rect width="128" height="128" rx="64" fill="#DBEAFE"/>
+  <circle cx="64" cy="50" r="24" fill="#2563EB" opacity="0.95"/>
+  <path d="M64 75c-20 0-36 13-36 29v3h72v-3c0-16-16-29-36-29z" fill="#2563EB" opacity="0.92"/>
+  <path d="M42 48c4-16 15-24 22-24 8 0 17 5 22 15 1 2 2 4 2 9-4-6-10-10-16-10-8 0-13 3-16 7-3-4-8-7-14-7-2 0-4 0-6 2z" fill="#1E40AF"/>
+  <circle cx="56" cy="46" r="2.8" fill="#0F172A"/>
+  <circle cx="72" cy="46" r="2.8" fill="#0F172A"/>
+  <path d="M56 58c2.3 3 5 4.5 8 4.5s5.7-1.5 8-4.5" fill="none" stroke="#0F172A" stroke-width="2.6" stroke-linecap="round"/>
+</svg>

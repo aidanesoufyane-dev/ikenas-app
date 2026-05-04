@@ -1,27 +1,46 @@
 import 'package:flutter/material.dart';
 
-class SpriteAvatar extends StatelessWidget {
-  final int index;
-  final double size;
+/// Returns the asset path for the gender avatar.
+/// gender: 'F' / 'female' / 'f' → avatar_1 (female)
+/// anything else / null           → avatar_2 (male)
+String genderAvatarAsset(String? gender) {
+  final g = gender?.toLowerCase().trim() ?? '';
+  if (g == 'f' || g == 'female' || g == 'féminin' || g == 'feminin') {
+    return 'assets/images/avatars/avatar_1.png';
+  }
+  return 'assets/images/avatars/avatar_2.png';
+}
 
-  const SpriteAvatar({super.key, required this.index, required this.size});
+class SpriteAvatar extends StatelessWidget {
+  /// 0 = female (avatar_1), 1 = male (avatar_2), null = male default
+  final int? index;
+  final double size;
+  final String? gender;
+
+  const SpriteAvatar({
+    super.key,
+    this.index,
+    required this.size,
+    this.gender,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // Safety check for 28 avatars (0-27)
-    if (index < 0 || index > 27) {
-      return _buildFallback();
+    final String assetPath;
+    if (gender != null) {
+      assetPath = genderAvatarAsset(gender);
+    } else if (index == 0) {
+      assetPath = 'assets/images/avatars/avatar_1.png';
+    } else {
+      assetPath = 'assets/images/avatars/avatar_2.png';
     }
-
-    // Files are saved as avatar_1.png to avatar_28.png (1-indexed) in assets/images/avatars/
-    final assetPath = 'assets/images/avatars/avatar_${index + 1}.png';
 
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: const Color(0xFFF0EDE8), // Match the avatar background tint
+        color: const Color(0xFFF0EDE8),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.15),
@@ -36,7 +55,6 @@ class SpriteAvatar extends StatelessWidget {
         width: size,
         height: size,
         fit: BoxFit.cover,
-        // Use gapless playback to avoid flicker on rebuild
         gaplessPlayback: true,
         errorBuilder: (context, error, stackTrace) => _buildFallback(),
       ),
@@ -47,9 +65,9 @@ class SpriteAvatar extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
