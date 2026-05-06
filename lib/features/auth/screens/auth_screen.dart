@@ -7,9 +7,6 @@ import '../../../core/widgets/deep_space_background.dart';
 import '../../parent/screens/parent_dashboard.dart';
 import '../../teacher/screens/teacher_dashboard.dart';
 
-enum AuthView { welcome, login }
-enum PortalType { parent, teacher }
-
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -18,8 +15,6 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  AuthView _currentView = AuthView.welcome;
-  PortalType? _selectedPortal;
   bool _isLoading = false;
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
@@ -40,7 +35,6 @@ class _AuthScreenState extends State<AuthScreen> {
     final appState = Provider.of<AppState>(context);
     final bool isAr = appState.locale.languageCode == 'ar';
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryTextColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final secondaryTextColor = isDark ? Colors.white38 : Colors.black26;
 
     return Scaffold(
@@ -53,49 +47,17 @@ class _AuthScreenState extends State<AuthScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               children: [
-                // Top Bar: Language Switcher & Back Button
+                // Top Bar: Language Switcher
                 Padding(
                   padding: const EdgeInsets.only(top: 10),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      if (_currentView == AuthView.login)
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _currentView = AuthView.welcome;
-                              _selectedPortal = null;
-                              _emailController.clear();
-                              _passwordController.clear();
-                              _errorMessage = null;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.05)
-                                  : Colors.white.withValues(alpha: 0.8),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                  color: isDark
-                                      ? Colors.white.withValues(alpha: 0.05)
-                                      : Colors.white),
-                            ),
-                            child: Icon(Icons.arrow_back_ios_new_rounded,
-                                color: primaryTextColor.withValues(alpha: 0.7),
-                                size: 18),
-                          ),
-                        ).animate().fadeIn().scale(),
-                      const Spacer(),
-                      _buildLanguagePortal(context, isAr),
-                    ],
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [_buildLanguagePortal(context, isAr)],
                   ),
                 ),
 
                 const SizedBox(height: 32),
 
-                // "Ikenas Platinum" Header
                 _buildHeader(context)
                     .animate()
                     .fadeIn(delay: 200.ms)
@@ -103,31 +65,14 @@ class _AuthScreenState extends State<AuthScreen> {
 
                 const SizedBox(height: 32),
 
-                // Animated Switcher between Welcome and Login
-                AnimatedSwitcher(
-                  duration: 600.ms,
-                  switchInCurve: Curves.easeOutQuart,
-                  switchOutCurve: Curves.easeInQuart,
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: animation.drive(Tween<Offset>(
-                          begin: const Offset(0, 0.05),
-                          end: Offset.zero,
-                        )),
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: _currentView == AuthView.welcome
-                      ? _buildWelcomeView(context)
-                      : _buildLoginView(context),
-                ),
+                _buildLoginForm(context)
+                    .animate()
+                    .fadeIn(delay: 300.ms)
+                    .slideY(begin: 0.05),
 
                 const SizedBox(height: 80),
                 Text(
-                  '${AppLocalizations.of(context)!.translate('school_app_2026')} \u2022 Ikenas Technology',
+                  '${AppLocalizations.of(context)!.translate('school_app_2026')} • Ikenas Technology',
                   style: TextStyle(
                       color: secondaryTextColor.withValues(alpha: 0.4),
                       fontSize: 9,
@@ -143,57 +88,11 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  Widget _buildWelcomeView(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final secondaryTextColor = isDark ? Colors.white38 : Colors.black26;
-
-    return Column(
-      key: const ValueKey('WelcomeView'),
-      children: [
-        Text(AppLocalizations.of(context)!.translate('select_portal'),
-            style: TextStyle(
-                color: secondaryTextColor,
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 2.5)),
-        const SizedBox(height: 24),
-        Column(
-          children: [
-            _buildPortalCard(
-                context,
-                AppLocalizations.of(context)!.translate('parent_uppercase'),
-                AppLocalizations.of(context)!.translate('parent_desc'),
-                Icons.person_pin_rounded,
-                Colors.blueAccent, () {
-              setState(() {
-                _selectedPortal = PortalType.parent;
-                _currentView = AuthView.login;
-              });
-            }),
-            const SizedBox(height: 16),
-            _buildPortalCard(
-                context,
-                AppLocalizations.of(context)!.translate('teacher_uppercase'),
-                AppLocalizations.of(context)!.translate('teacher_desc'),
-                Icons.school_rounded,
-                Colors.purpleAccent, () {
-              setState(() {
-                _selectedPortal = PortalType.teacher;
-                _currentView = AuthView.login;
-              });
-            }),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLoginView(BuildContext context) {
+  Widget _buildLoginForm(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white;
 
     return Container(
-      key: const ValueKey('LoginView'),
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: cardBg,
@@ -233,7 +132,6 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
             const SizedBox(height: 40),
 
-            // Platinum Level Inputs
             _buildPlatinumInput(
               context,
               Icons.alternate_email_rounded,
@@ -266,11 +164,8 @@ class _AuthScreenState extends State<AuthScreen> {
                   size: 20,
                 ),
                 splashRadius: 24,
-                onPressed: () {
-                  setState(() {
-                    _obscurePassword = !_obscurePassword;
-                  });
-                },
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
@@ -320,7 +215,6 @@ class _AuthScreenState extends State<AuthScreen> {
 
             const SizedBox(height: 40),
 
-            // Action Button
             SizedBox(
               width: double.infinity,
               child: Container(
@@ -380,12 +274,6 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (!_formKey.currentState!.validate()) return;
 
-    // Validate portal selection
-    if (_selectedPortal == null) {
-      setState(() => _errorMessage = 'Veuillez sélectionner un portail');
-      return;
-    }
-
     setState(() => _isLoading = true);
     final appState = Provider.of<AppState>(context, listen: false);
 
@@ -393,33 +281,14 @@ class _AuthScreenState extends State<AuthScreen> {
       await appState.login(_emailController.text, _passwordController.text);
       if (!mounted) return;
 
-      // ✅ CRITICAL: Validate that login credentials match the selected portal
-      final isLoginParent = appState.isParent;
-      final selectedParent = _selectedPortal == PortalType.parent;
-
-      if (isLoginParent != selectedParent) {
-        // ❌ Role mismatch - reject login and show error
-        await appState.logout();
-        setState(() {
-          _isLoading = false;
-          _errorMessage = selectedParent
-              ? 'Identifiants invalides pour l\'espace parent. Veuillez utiliser les identifiants d\'un parent.'
-              : 'Identifiants invalides pour l\'espace professeur. Veuillez utiliser les identifiants d\'un professeur.';
-        });
-        return;
-      }
-
-      if (appState.isParent) {
-        Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => const ParentDashboard()),
-            (route) => false);
-      } else {
-        Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => const TeacherDashboard()),
-            (route) => false);
-      }
+      // Redirect based on role returned by the API
+      Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+              builder: (_) => appState.isParent
+                  ? const ParentDashboard()
+                  : const TeacherDashboard()),
+          (route) => false);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -455,81 +324,6 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
       );
     }
-  }
-
-  Widget _buildPortalCard(BuildContext context, String title, String desc,
-      IconData icon, Color accent, VoidCallback onTap) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white;
-    final primaryTextColor = isDark ? Colors.white : const Color(0xFF0F172A);
-    final secondaryTextColor =
-        isDark ? Colors.white.withValues(alpha: 0.4) : Colors.black45;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.white.withValues(alpha: 0.8)),
-          boxShadow: isDark
-              ? []
-              : [
-                  BoxShadow(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4))
-                ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: accent.withValues(alpha: 0.1)),
-              ),
-              child: Icon(icon, color: accent, size: 32),
-            ),
-            const SizedBox(height: 20),
-            Text(title,
-                style: TextStyle(
-                    color: primaryTextColor,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 18,
-                    letterSpacing: 0.5)),
-            const SizedBox(height: 8),
-            Text(desc,
-                style: TextStyle(
-                    color: secondaryTextColor,
-                    fontSize: 12,
-                    height: 1.5,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.2)),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Text(AppLocalizations.of(context)!.translate('enter_uppercase'),
-                    style: TextStyle(
-                        color: accent.withValues(alpha: 0.8),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5)),
-                const SizedBox(width: 8),
-                Icon(Icons.arrow_forward_ios_rounded,
-                    color: accent.withValues(alpha: 0.8), size: 10),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildPlatinumInput(BuildContext context, IconData icon, String hint,
