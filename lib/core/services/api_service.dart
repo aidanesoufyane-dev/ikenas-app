@@ -352,10 +352,11 @@ class ApiService {
   Future<List<GradeModel>> getGrades(String studentId) async {
     List<GradeModel> allGrades = [];
     final endpoints = ['/notes/my-results', '/exams/my-results'];
+    final qp = studentId.isNotEmpty ? {'studentId': studentId} : null;
 
     for (final endpoint in endpoints) {
       try {
-        final response = await _dio.get(endpoint);
+        final response = await _dio.get(endpoint, queryParameters: qp);
         if (response.statusCode == 200) {
           final raw = _handleResponseData(response);
           if (raw is List && raw.isNotEmpty) {
@@ -555,10 +556,11 @@ class ApiService {
   /// GET /attendances/me → student's own absences
   Future<List<AttendanceRecord>> getAbsences(String studentId) async {
     final endpoints = ['/attendances/me', '/attendances/student/me'];
+    final qp = studentId.isNotEmpty ? {'studentId': studentId} : null;
 
     for (final endpoint in endpoints) {
       try {
-        final response = await _dio.get(endpoint);
+        final response = await _dio.get(endpoint, queryParameters: qp);
         if (response.statusCode == 200) {
           final raw = _handleResponseData(response);
           if (raw is List) {
