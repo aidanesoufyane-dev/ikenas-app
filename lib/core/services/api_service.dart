@@ -320,8 +320,23 @@ class ApiService {
   }
 
   Future<List<StudentModel>> getChildren() async {
+    // Primary: dedicated parent/children endpoint
     try {
-      // For a logged-in student/parent, the space endpoint gives student info.
+      final response = await _dio.get('/students/parent/children');
+      if (response.statusCode == 200) {
+        final raw = _handleResponseData(response);
+        if (raw is List) {
+          return raw
+              .map((s) => StudentModel.fromJson(s as Map<String, dynamic>))
+              .toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('[API] getChildren primary failed: $e');
+    }
+
+    // Fallback: payment space endpoint
+    try {
       final response = await _dio.get('/payments/student/me/space');
       if (response.statusCode == 200) {
         final dataMap = _handleResponseData(response);
@@ -335,12 +350,11 @@ class ApiService {
               .map((s) => StudentModel.fromJson(s as Map<String, dynamic>))
               .toList();
         }
-        return [];
       }
-      throw Exception('Failed to load children data');
     } catch (e) {
-      rethrow;
+      debugPrint('[API] getChildren fallback failed: $e');
     }
+    return [];
   }
 
   // ---------------------------------------------------------------------------

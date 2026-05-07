@@ -248,7 +248,7 @@ class GradeModel {
 
     // Infer semester from date if not provided
     String semester = json['semester']?.toString() ?? '';
-    final rawDate = json['date'] ?? json['createdAt'] ?? json['passedAt'] ?? '';
+    final rawDate = json['date'] ?? json['createdAt'] ?? json['passedAt'] ?? json['updatedAt'] ?? '';
     if (semester.isEmpty && rawDate.isNotEmpty) {
       try {
         final dt = DateTime.parse(rawDate);
