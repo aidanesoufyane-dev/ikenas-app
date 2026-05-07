@@ -38,11 +38,13 @@ class ChatViewModel extends ChangeNotifier {
 
   // ── API init ─────────────────────────────────────────────────
   Future<ChatApiService> _getApi() async {
-    if (_chatApi != null) return _chatApi!;
-    final token = ApiService.instance.token ?? '';
-    final baseUrl = ApiService.instance.baseUrl;
     await AuthService.instance.init();
-    _currentUserId = AuthService.instance.getStoredUser()?.id;
+    _currentUserId ??= AuthService.instance.getStoredUser()?.id;
+    // Always read fresh token — never cache a Dio instance that may have stale/empty auth
+    final token = AuthService.instance.getStoredToken()
+        ?? ApiService.instance.token
+        ?? '';
+    final baseUrl = ApiService.instance.baseUrl;
     final dio = Dio(BaseOptions(
       baseUrl: baseUrl,
       headers: {'Authorization': 'Bearer $token'},
