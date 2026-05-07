@@ -236,7 +236,14 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
       'results': entries,
     };
 
-    await ApiService.instance.saveNotes(payload);
+    final result = await ApiService.instance.saveNotes(payload);
+    debugPrint('[GradeEntry] save result: $result');
+    if (result['saved'] == 0 && result['studentsInClass'] == 0) {
+      throw Exception('Aucun élève trouvé dans cette classe côté serveur. Vérifiez l\'attribution de classe.');
+    }
+    if (result['saved'] == 0 && (result['incomingResults'] as int? ?? 0) > 0) {
+      throw Exception('Les élèves envoyés ne correspondent pas à la classe sur le serveur (filteredResults=0, studentsInClass=${result['studentsInClass']}).');
+    }
   }
 
   void _showGradesTable() {

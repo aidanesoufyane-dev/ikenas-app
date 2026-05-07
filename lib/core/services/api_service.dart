@@ -418,9 +418,22 @@ class ApiService {
   }
 
   /// POST /notes/save → save a note sheet (teacher)
-  Future<bool> saveNotes(Map<String, dynamic> noteSheetData) async {
+  /// Returns debug info from backend: { saved, studentsInClass, filteredResults }
+  Future<Map<String, dynamic>> saveNotes(Map<String, dynamic> noteSheetData) async {
     final response = await _dio.post('/notes/save', data: noteSheetData);
-    return response.statusCode == 200 || response.statusCode == 201;
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final d = response.data is Map ? response.data as Map : {};
+      final debug = d['_debug'] as Map? ?? {};
+      debugPrint('[saveNotes] _debug: $debug');
+      return {
+        'success': true,
+        'saved': debug['filteredResults'] ?? -1,
+        'studentsInClass': debug['studentsInClass'] ?? -1,
+        'incomingResults': debug['incomingResults'] ?? -1,
+        'sheetId': debug['sheetId'] ?? '',
+      };
+    }
+    return {'success': false, 'saved': 0};
   }
 
   /// GET /exams/:id/results → exam results list
