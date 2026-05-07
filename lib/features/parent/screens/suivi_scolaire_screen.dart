@@ -50,6 +50,7 @@ class _SuiviScolaireScreenState extends State<SuiviScolaireScreen> {
 
     // Fetch data on load
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('[SuiviScreen] student.id=${widget.student.id} name=${widget.student.name} class=${widget.student.className}');
       final suiviVM = context.read<SuiviViewModel>();
       suiviVM.startPolling(widget.student.id);
       suiviVM.fetchSuiviData(widget.student.id);
