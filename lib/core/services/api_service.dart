@@ -320,12 +320,12 @@ class ApiService {
   }
 
   Future<List<StudentModel>> getChildren() async {
-    // Primary: dedicated parent/children endpoint
+    // Primary: dedicated parent/children endpoint (parent role only)
     try {
       final response = await _dio.get('/students/parent/children');
       if (response.statusCode == 200) {
         final raw = _handleResponseData(response);
-        if (raw is List) {
+        if (raw is List && raw.isNotEmpty) {
           return raw
               .map((s) => StudentModel.fromJson(s as Map<String, dynamic>))
               .toList();
