@@ -367,29 +367,37 @@ class ApiService {
     List<GradeModel> allGrades = [];
     final endpoints = ['/notes/my-results', '/exams/my-results'];
     final qp = studentId.isNotEmpty ? {'studentId': studentId} : null;
+    debugPrint('[getGrades] studentId="$studentId" qp=$qp');
 
     for (final endpoint in endpoints) {
       try {
         final response = await _dio.get(endpoint, queryParameters: qp);
+        debugPrint('[getGrades] $endpoint → status=${response.statusCode}');
         if (response.statusCode == 200) {
           final raw = _handleResponseData(response);
+          debugPrint('[getGrades] $endpoint → raw type=${raw.runtimeType} count=${raw is List ? raw.length : "N/A"}');
           if (raw is List && raw.isNotEmpty) {
             final parsed = raw
                 .map((json) {
                   try {
                     return GradeModel.fromJson(json as Map<String, dynamic>);
                   } catch (e) {
-                    debugPrint('[Grades] parse error: $e');
+                    debugPrint('[getGrades] parse error for $json: $e');
                     return null;
                   }
                 })
                 .whereType<GradeModel>()
                 .toList();
+            debugPrint('[getGrades] $endpoint → parsed ${parsed.length} grades');
             allGrades.addAll(parsed);
+          } else {
+            debugPrint('[getGrades] $endpoint → data=${response.data}');
           }
+        } else {
+          debugPrint('[getGrades] $endpoint → non-200: ${response.data}');
         }
       } catch (e) {
-        debugPrint('[Grades] $endpoint failed: $e');
+        debugPrint('[getGrades] $endpoint EXCEPTION: $e');
       }
     }
 

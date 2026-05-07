@@ -285,6 +285,12 @@ class _SuiviScolaireScreenState extends State<SuiviScolaireScreen> {
             Text(AppLocalizations.of(context)!.translate('no_history'),
                 style: const TextStyle(
                     color: Colors.white54, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 8),
+            SelectableText(
+              'ID élève: ${widget.student.id}',
+              style: const TextStyle(color: Colors.white24, fontSize: 10),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       );
