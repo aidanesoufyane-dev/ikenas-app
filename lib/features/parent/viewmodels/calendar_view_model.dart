@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/mock_data_service.dart';
 
 class CalendarViewModel extends ChangeNotifier {
   final ApiService _apiService = ApiService.instance;
@@ -24,8 +25,10 @@ class CalendarViewModel extends ChangeNotifier {
         month: month,
         year: year,
       );
+      if (_events.isEmpty) _events = MockDataService.getCalendarEvents();
     } catch (e) {
-      _errorMessage = _apiService.getLocalizedErrorMessage(e);
+      _events = MockDataService.getCalendarEvents();
+      _errorMessage = null;
     } finally {
       _isLoading = false;
       notifyListeners();

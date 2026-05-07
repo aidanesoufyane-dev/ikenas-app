@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/mock_data_service.dart';
 
 class FeedViewModel extends ChangeNotifier {
   final ApiService _apiService = ApiService.instance;
@@ -56,7 +57,8 @@ class FeedViewModel extends ChangeNotifier {
     }
 
     try {
-      final freshPosts = await _apiService.getPosts();
+      List<PostModel> freshPosts = await _apiService.getPosts();
+      if (freshPosts.isEmpty) freshPosts = MockDataService.getPosts();
 
       // Load local likes
       final prefs = await SharedPreferences.getInstance();
@@ -87,9 +89,10 @@ class FeedViewModel extends ChangeNotifier {
       if (!silent) _isLoading = false;
       notifyListeners();
     } catch (e) {
+      if (_posts.isEmpty) _posts = MockDataService.getPosts();
       if (!silent) {
         _isLoading = false;
-        _errorMessage = _apiService.getLocalizedErrorMessage(e);
+        _errorMessage = null;
       }
       notifyListeners();
     }

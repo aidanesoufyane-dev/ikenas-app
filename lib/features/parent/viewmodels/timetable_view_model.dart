@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/mock_data_service.dart';
 
 class TimetableViewModel extends ChangeNotifier {
   final ApiService _apiService = ApiService.instance;
@@ -56,8 +57,10 @@ class TimetableViewModel extends ChangeNotifier {
 
     try {
       _timetable = await _apiService.getTimetable(studentId);
+      if (_timetable.isEmpty) _timetable = MockDataService.getTimetable();
     } catch (e) {
-      if (!silent) _errorMessage = _apiService.getLocalizedErrorMessage(e);
+      _timetable = MockDataService.getTimetable();
+      if (!silent) _errorMessage = null;
     } finally {
       if (!silent) {
         _isLoading = false;

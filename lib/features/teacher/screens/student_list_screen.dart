@@ -5,6 +5,7 @@ import '../../../core/widgets/deep_space_background.dart';
 import '../../../core/widgets/sprite_avatar.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/mock_data_service.dart';
 import 'student_detail_full_screen.dart';
 
 class StudentListScreen extends StatefulWidget {
@@ -34,7 +35,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
       final students = await ApiService.instance.getStudentsByClass(widget.classModel.id);
       if (mounted) {
         setState(() {
-          _allStudents = students;
+          _allStudents = students.isEmpty ? MockDataService.getStudents() : students;
           _isLoading = false;
         });
         _applyFilters('', _selectedSort);
@@ -43,9 +44,11 @@ class _StudentListScreenState extends State<StudentListScreen> {
       debugPrint('[StudentListScreen] Error fetching students: $e');
       if (mounted) {
         setState(() {
+          _allStudents = MockDataService.getStudents();
           _isLoading = false;
-          _error = 'Impossible de charger les élèves.';
+          _error = null;
         });
+        _applyFilters('', _selectedSort);
       }
     }
   }

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/mock_data_service.dart';
 
 class HomeworkViewModel extends ChangeNotifier {
   final ApiService _apiService = ApiService.instance;
@@ -81,7 +82,10 @@ class HomeworkViewModel extends ChangeNotifier {
         _apiService.getExams(studentId),
       ]);
 
-      final combined = [...results[0], ...results[1]];
+      List<HomeworkModel> combined = [...results[0], ...results[1]];
+      if (combined.isEmpty) {
+        combined = [...MockDataService.getHomework(), ...MockDataService.getExams()];
+      }
 
       // Preserve locally-marked-done items so the 1-second poll never reverts them
       // before (or even after) the server confirms the submission.

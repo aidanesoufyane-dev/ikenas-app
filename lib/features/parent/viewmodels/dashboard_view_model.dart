@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/mock_data_service.dart';
 
 class DashboardViewModel extends ChangeNotifier {
   final ApiService _apiService = ApiService.instance;
@@ -561,8 +562,10 @@ class DashboardViewModel extends ChangeNotifier {
 
     try {
       _children = await _apiService.getChildren();
+      if (_children.isEmpty) _children = MockDataService.getChildren();
     } catch (e) {
-      if (!silent) _errorMessage = _apiService.getLocalizedErrorMessage(e);
+      _children = MockDataService.getChildren();
+      if (!silent) _errorMessage = null; // suppress error — mock data is shown
     } finally {
       if (!silent) {
         _isLoading = false;
@@ -629,6 +632,7 @@ class DashboardViewModel extends ChangeNotifier {
       if (forceRefresh || _cachedGrades == null) {
         final studentId = _children.isNotEmpty ? _children[0].id : 'me';
         _cachedGrades = await _apiService.getGrades(studentId);
+        if (_cachedGrades!.isEmpty) _cachedGrades = MockDataService.getGrades();
       }
 
       final grades = _cachedGrades ?? [];

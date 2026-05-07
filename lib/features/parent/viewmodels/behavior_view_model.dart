@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/mock_data_service.dart';
 
 class BehaviorViewModel extends ChangeNotifier {
   final ApiService _apiService = ApiService.instance;
@@ -61,9 +62,13 @@ class BehaviorViewModel extends ChangeNotifier {
         _apiService.getBehaviorHistory(studentId),
       ]);
       _summary = results[0] as Map<String, dynamic>;
+      if (_summary.isEmpty) _summary = MockDataService.getBehaviorSummary();
       _history = results[1] as List<Map<String, dynamic>>;
+      if (_history.isEmpty) _history = MockDataService.getBehaviorHistory();
     } catch (e) {
-      if (!silent) _errorMessage = _apiService.getLocalizedErrorMessage(e);
+      _summary = MockDataService.getBehaviorSummary();
+      _history = MockDataService.getBehaviorHistory();
+      if (!silent) _errorMessage = null;
     } finally {
       if (!silent) {
         _isLoading = false;

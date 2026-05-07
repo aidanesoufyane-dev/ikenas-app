@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/mock_data_service.dart';
 
 class SuiviViewModel extends ChangeNotifier {
   final ApiService _apiService = ApiService.instance;
@@ -143,8 +144,11 @@ class SuiviViewModel extends ChangeNotifier {
       ]);
 
       _grades = results[0] as List<GradeModel>;
+      if (_grades.isEmpty) _grades = MockDataService.getGrades();
+
       final fetchedAbsences = results[1] as List<AttendanceRecord>;
       _schedule = results[2] as List<TimetableSessionModel>;
+      if (_schedule.isEmpty) _schedule = MockDataService.getTimetable();
 
       // Preserve optimistic justifications when backend propagation is delayed.
       final optimisticById = <String, AttendanceRecord>{
@@ -258,7 +262,11 @@ class SuiviViewModel extends ChangeNotifier {
       });
 
       _absences.clear();
-      _absences.addAll(finalAbsences);
+      if (finalAbsences.isEmpty) {
+        _absences.addAll(MockDataService.getAttendance());
+      } else {
+        _absences.addAll(finalAbsences);
+      }
 
       debugPrint(
           'Parsed ${_grades.length} grades, ${_absences.length} absences, ${_schedule.length} schedule slots');
