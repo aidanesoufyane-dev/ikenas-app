@@ -444,6 +444,19 @@ class ApiService {
     return {'success': false, 'saved': 0};
   }
 
+  /// GET /notes/debug-student/:id → raw DB diagnostic for a student
+  Future<Map<String, dynamic>> debugStudentNotes(String studentId) async {
+    try {
+      final response = await _dio.get('/notes/debug-student/$studentId');
+      if (response.statusCode == 200 && response.data is Map) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+    } catch (e) {
+      return {'error': e.toString()};
+    }
+    return {'error': 'unexpected response'};
+  }
+
   /// GET /exams/:id/results → exam results list
   Future<List<Map<String, dynamic>>> getExamResults(String examId) async {
     final response = await _dio.get('/exams/$examId/results');

@@ -9,6 +9,7 @@ import '../../../core/models/models.dart';
 import '../../../core/widgets/deep_space_background.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../viewmodels/suivi_view_model.dart';
+import '../../../core/services/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:open_filex/open_filex.dart';
 
@@ -55,6 +56,40 @@ class _SuiviScolaireScreenState extends State<SuiviScolaireScreen> {
       suiviVM.startPolling(widget.student.id);
       suiviVM.fetchSuiviData(widget.student.id);
     });
+  }
+
+  Future<void> _showStudentDebug(BuildContext ctx) async {
+    final data = await ApiService.instance.debugStudentNotes(widget.student.id);
+    if (!mounted) return;
+    // ignore: use_build_context_synchronously
+    final context = ctx;
+    final entries = (data['noteEntries'] as List?)?.length ?? 0;
+    final sheets = data['sheets'] as List? ?? [];
+    final visibleSheets = sheets.where((s) => s['visible'] != false && s['isActive'] != false).length;
+    final info = StringBuffer();
+    info.writeln('ID: ${widget.student.id}');
+    info.writeln('Trouvé en DB: ${data['studentFound']}');
+    if (data['student'] != null) {
+      final s = data['student'] as Map;
+      info.writeln('Nom: ${s['name']}');
+      info.writeln('Classe: ${s['classe']} (id: ${s['classeId']})');
+      info.writeln('parentUser: ${s['parentUser']}');
+    }
+    info.writeln('NoteEntries: $entries');
+    info.writeln('Sheets: ${sheets.length} (visibles: $visibleSheets)');
+    for (final s in sheets) {
+      info.writeln('  - ${s['title']} | visible=${s['visible']} isActive=${s['isActive']}');
+    }
+    if (data['error'] != null) info.writeln('Erreur: ${data['error']}');
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Diagnostic notes', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(child: SelectableText(info.toString(), style: const TextStyle(fontSize: 11, fontFamily: 'monospace'))),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Fermer'))],
+      ),
+    );
   }
 
   @override
@@ -286,10 +321,13 @@ class _SuiviScolaireScreenState extends State<SuiviScolaireScreen> {
                 style: const TextStyle(
                     color: Colors.white54, fontWeight: FontWeight.w900)),
             const SizedBox(height: 8),
-            SelectableText(
-              'ID élève: ${widget.student.id}',
-              style: const TextStyle(color: Colors.white24, fontSize: 10),
-              textAlign: TextAlign.center,
+            GestureDetector(
+              onTap: () => _showStudentDebug(context),
+              child: Text(
+                'ID élève: ${widget.student.id}\n(appuyer pour diagnostic)',
+                style: const TextStyle(color: Colors.white24, fontSize: 10),
+                textAlign: TextAlign.center,
+              ),
             ),
           ],
         ),

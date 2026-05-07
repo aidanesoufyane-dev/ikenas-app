@@ -179,8 +179,10 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
     }
   }
 
-  Future<void> _saveGrades() async {
-    if (_selectedClass == null || _selectedSubjectData == null) return;
+  Future<Map<String, dynamic>> _saveGrades() async {
+    if (_selectedClass == null || _selectedSubjectData == null) {
+      return {'saved': 0, 'studentsInClass': 0, 'incomingResults': 0};
+    }
 
     final components = _currentComponents;
 
@@ -244,6 +246,7 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
     if (result['saved'] == 0 && (result['incomingResults'] as int? ?? 0) > 0) {
       throw Exception('Les élèves envoyés ne correspondent pas à la classe sur le serveur (filteredResults=0, studentsInClass=${result['studentsInClass']}).');
     }
+    return result;
   }
 
   void _showGradesTable() {
@@ -554,19 +557,22 @@ class _GradeEntryScreenState extends State<GradeEntryScreen> {
                                   : () async {
                                       setSaveState(() => isSaving = true);
                                       try {
-                                        await _saveGrades();
+                                        final saveResult = await _saveGrades();
                                         if (!context.mounted) return;
                                         Navigator.pop(context);
+                                        final saved = saveResult['saved'] as int? ?? -1;
+                                        final inClass = saveResult['studentsInClass'] as int? ?? -1;
+                                        final msg = saved >= 0
+                                            ? '✓ $saved élève(s) enregistré(s) / $inClass dans la classe'
+                                            : AppLocalizations.of(context)!.translate('table_save_success');
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(SnackBar(
-                                          content: Text(
-                                              AppLocalizations.of(context)!
-                                                  .translate(
-                                                      'table_save_success'),
+                                          content: Text(msg,
                                               style: const TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   color: Colors.white)),
                                           backgroundColor: Colors.blueAccent,
+                                          duration: const Duration(seconds: 5),
                                         ));
                                       } catch (e) {
                                         setSaveState(() => isSaving = false);
