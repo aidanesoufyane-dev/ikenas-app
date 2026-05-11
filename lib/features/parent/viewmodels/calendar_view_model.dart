@@ -25,10 +25,9 @@ class CalendarViewModel extends ChangeNotifier {
         month: month,
         year: year,
       );
-      if (_events.isEmpty) _events = MockDataService.getCalendarEvents();
     } catch (e) {
-      _events = MockDataService.getCalendarEvents();
-      _errorMessage = null;
+      _events = [];
+      _errorMessage = 'Impossible de charger le calendrier.';
     } finally {
       _isLoading = false;
       notifyListeners();

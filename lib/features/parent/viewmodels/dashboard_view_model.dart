@@ -562,10 +562,9 @@ class DashboardViewModel extends ChangeNotifier {
 
     try {
       _children = await _apiService.getChildren();
-      if (_children.isEmpty) _children = MockDataService.getChildren();
     } catch (e) {
-      _children = MockDataService.getChildren();
-      if (!silent) _errorMessage = null; // suppress error — mock data is shown
+      _children = [];
+      if (!silent) _errorMessage = 'Impossible de charger les enfants.'; 
     } finally {
       if (!silent) {
         _isLoading = false;
@@ -632,7 +631,6 @@ class DashboardViewModel extends ChangeNotifier {
       if (forceRefresh || _cachedGrades == null) {
         final studentId = _children.isNotEmpty ? _children[0].id : 'me';
         _cachedGrades = await _apiService.getGrades(studentId);
-        if (_cachedGrades!.isEmpty) _cachedGrades = MockDataService.getGrades();
       }
 
       final grades = _cachedGrades ?? [];

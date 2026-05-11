@@ -28,7 +28,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
         TextEditingController(text: appState.currentUser?.name ?? '');
     _emailController =
         TextEditingController(text: appState.currentUser?.email ?? '');
-    _dobController = TextEditingController(text: '-- / -- / ----');
     _phoneController =
         TextEditingController(text: appState.currentUser?.phone ?? '');
     _tempAvatarIndex = appState.currentUser?.avatarIndex;
@@ -38,7 +37,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _dobController.dispose();
     _phoneController.dispose();
     super.dispose();
   }
@@ -216,16 +214,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                         label: 'Adresse Email',
                         icon: Icons.mail_outline_rounded,
                         controller: _emailController,
-                        trailingIcon: Icons.lock_outline_rounded,
-                        readOnly: true,
-                      ),
-                      const SizedBox(height: 16),
-
-                      _buildField(
-                        context: context,
-                        label: 'Date de Naissance',
-                        icon: Icons.cake_outlined,
-                        controller: _dobController,
                         trailingIcon: Icons.lock_outline_rounded,
                         readOnly: true,
                       ),

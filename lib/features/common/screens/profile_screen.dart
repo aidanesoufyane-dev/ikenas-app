@@ -10,7 +10,6 @@ import '../../auth/screens/auth_screen.dart';
 import '../../../core/widgets/deep_space_background.dart';
 import '../../../core/widgets/sprite_avatar.dart';
 import 'personal_info_screen.dart';
-import 'help_support_screen.dart';
 import '../../../core/widgets/confirmation_dialog.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -115,19 +114,6 @@ class ProfileScreen extends StatelessWidget {
                         loc.translate('language'),
                         'Changer la langue',
                         () => _showLanguageSwitcher(context),
-                        glassColor,
-                        glassBorder,
-                        primaryTextColor,
-                        secondaryTextColor),
-                    _buildProfileTile(
-                        context,
-                        Icons.help_outline_rounded,
-                        loc.translate('help_support'),
-                        'Centre de support',
-                        () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const HelpSupportScreen())),
                         glassColor,
                         glassBorder,
                         primaryTextColor,

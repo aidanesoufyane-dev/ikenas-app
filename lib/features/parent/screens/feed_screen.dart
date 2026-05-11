@@ -578,13 +578,16 @@ class _FeedScreenState extends State<FeedScreen> {
                         fit: BoxFit.contain),
                   ),
                   const SizedBox(width: 16),
-                  Text(
-                    AppLocalizations.of(context)!.translate('news_title'),
-                    style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: primaryTextColor,
-                        fontSize: 22,
-                        letterSpacing: -0.8),
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.of(context)!.translate('news_title'),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          color: primaryTextColor,
+                          fontSize: 22,
+                          letterSpacing: -0.8),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),

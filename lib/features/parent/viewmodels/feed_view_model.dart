@@ -58,7 +58,6 @@ class FeedViewModel extends ChangeNotifier {
 
     try {
       List<PostModel> freshPosts = await _apiService.getPosts();
-      if (freshPosts.isEmpty) freshPosts = MockDataService.getPosts();
 
       // Load local likes
       final prefs = await SharedPreferences.getInstance();
@@ -89,10 +88,9 @@ class FeedViewModel extends ChangeNotifier {
       if (!silent) _isLoading = false;
       notifyListeners();
     } catch (e) {
-      if (_posts.isEmpty) _posts = MockDataService.getPosts();
       if (!silent) {
         _isLoading = false;
-        _errorMessage = null;
+        _errorMessage = 'Impossible de charger l\'actualité.';
       }
       notifyListeners();
     }

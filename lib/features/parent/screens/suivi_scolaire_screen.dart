@@ -289,6 +289,7 @@ class _SuiviScolaireScreenState extends State<SuiviScolaireScreen> {
           alignment: Alignment.center,
           child: Text(
             label,
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: isActive
                   ? Colors.white
@@ -479,8 +480,7 @@ class _SuiviScolaireScreenState extends State<SuiviScolaireScreen> {
                     const SizedBox(width: 12),
                     // Value Display
                     Container(
-                      height: 72,
-                      width: 72,
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: isDark
                             ? Colors.white.withValues(alpha: 0.05)
@@ -490,27 +490,31 @@ class _SuiviScolaireScreenState extends State<SuiviScolaireScreen> {
                             color: color.withValues(alpha: 0.15), width: 2),
                       ),
                       alignment: Alignment.center,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            subjectAvg.toStringAsFixed(1),
-                            style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 24,
-                                color: color,
-                                height: 1.1),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'pts',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 11,
-                                letterSpacing: 1,
-                                color: color.withValues(alpha: 0.5)),
-                          ),
-                        ],
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              subjectAvg.toStringAsFixed(1),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 24,
+                                  color: color,
+                                  height: 1.1),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'pts',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 11,
+                                  letterSpacing: 1,
+                                  color: color.withValues(alpha: 0.5)),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -1204,37 +1208,45 @@ class _SuiviScolaireScreenState extends State<SuiviScolaireScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("PRÉS.",
-                        style: TextStyle(
-                            color: secondaryTextColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 2.5)),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text("PRÉS.",
+                          style: TextStyle(
+                              color: secondaryTextColor,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 2.5)),
+                    ),
                     const SizedBox(height: 10),
-                    Text(
-                            rate >= 90
-                                ? "Excellent"
-                                : (rate >= 75 ? "Bon État" : "À Surveiller"),
-                            style: TextStyle(
-                                color: rate >= 75
-                                    ? (rate >= 90
-                                        ? Colors.greenAccent
-                                        : const Color(0xFF00F2FE))
-                                    : Colors.orangeAccent,
-                                fontSize: 28,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.5,
-                                shadows: [
-                                  Shadow(
-                                      color: (rate >= 75
-                                              ? const Color(0xFF00F2FE)
-                                              : Colors.orangeAccent)
-                                          .withValues(alpha: 0.3),
-                                      blurRadius: 15)
-                                ]))
-                        .animate()
-                        .fadeIn(delay: 500.ms)
-                        .slideX(begin: 0.1),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                              rate >= 90
+                                  ? "Excellent"
+                                  : (rate >= 75 ? "Bon État" : "À Surveiller"),
+                              style: TextStyle(
+                                  color: rate >= 75
+                                      ? (rate >= 90
+                                          ? Colors.greenAccent
+                                          : const Color(0xFF00F2FE))
+                                      : Colors.orangeAccent,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                  shadows: [
+                                    Shadow(
+                                        color: (rate >= 75
+                                                ? const Color(0xFF00F2FE)
+                                                : Colors.orangeAccent)
+                                            .withValues(alpha: 0.3),
+                                        blurRadius: 15)
+                                  ]))
+                          .animate()
+                          .fadeIn(delay: 500.ms)
+                          .slideX(begin: 0.1),
+                    ),
                     const SizedBox(height: 20),
                     // Glass Badge with Shimmer
                     Container(

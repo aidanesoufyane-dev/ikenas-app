@@ -83,9 +83,6 @@ class HomeworkViewModel extends ChangeNotifier {
       ]);
 
       List<HomeworkModel> combined = [...results[0], ...results[1]];
-      if (combined.isEmpty) {
-        combined = [...MockDataService.getHomework(), ...MockDataService.getExams()];
-      }
 
       // Preserve locally-marked-done items so the 1-second poll never reverts them
       // before (or even after) the server confirms the submission.

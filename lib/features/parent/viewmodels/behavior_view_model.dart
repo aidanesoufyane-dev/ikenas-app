@@ -62,13 +62,11 @@ class BehaviorViewModel extends ChangeNotifier {
         _apiService.getBehaviorHistory(studentId),
       ]);
       _summary = results[0] as Map<String, dynamic>;
-      if (_summary.isEmpty) _summary = MockDataService.getBehaviorSummary();
       _history = results[1] as List<Map<String, dynamic>>;
-      if (_history.isEmpty) _history = MockDataService.getBehaviorHistory();
     } catch (e) {
-      _summary = MockDataService.getBehaviorSummary();
-      _history = MockDataService.getBehaviorHistory();
-      if (!silent) _errorMessage = null;
+      _summary = {};
+      _history = [];
+      if (!silent) _errorMessage = 'Impossible de charger le comportement.';
     } finally {
       if (!silent) {
         _isLoading = false;

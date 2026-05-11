@@ -58,65 +58,67 @@ class _ParentDashboardState extends State<ParentDashboard> {
   }
 
   Widget _buildBottomNav(bool isDark, AppState appState) {
-    return Container(
-      margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.white.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.1)
-                : Colors.black.withValues(alpha: 0.05)),
-        boxShadow: [
-          if (!isDark)
-            BoxShadow(
-                color: Colors.blueAccent.withValues(alpha: 0.1),
-                blurRadius: 30,
-                offset: const Offset(0, 10))
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(
-                    Icons.home_rounded,
-                    AppLocalizations.of(context)!.translate('home'),
-                    0,
-                    isDark,
-                    appState),
-                _buildNavItem(
-                    Icons.feed_rounded,
-                    AppLocalizations.of(context)!.translate('feed_nav'),
-                    1,
-                    isDark,
-                    appState),
-                _buildNavItem(
-                    Icons.chat_bubble_outline_rounded,
-                    AppLocalizations.of(context)!.translate('messages'),
-                    2,
-                    isDark,
-                    appState),
-                _buildNavItem(
-                    Icons.payment_rounded,
-                    AppLocalizations.of(context)!.translate('payments_nav'),
-                    3,
-                    isDark,
-                    appState),
-                _buildNavItem(
-                    Icons.person_outline_rounded,
-                    AppLocalizations.of(context)!.translate('profile_nav'),
-                    4,
-                    isDark,
-                    appState),
-              ],
+    return SafeArea(
+      child: Container(
+        margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.white.withValues(alpha: 0.8),
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : Colors.black.withValues(alpha: 0.05)),
+          boxShadow: [
+            if (!isDark)
+              BoxShadow(
+                  color: Colors.blueAccent.withValues(alpha: 0.1),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10))
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(
+                      Icons.home_rounded,
+                      AppLocalizations.of(context)!.translate('home'),
+                      0,
+                      isDark,
+                      appState),
+                  _buildNavItem(
+                      Icons.feed_rounded,
+                      AppLocalizations.of(context)!.translate('feed_nav'),
+                      1,
+                      isDark,
+                      appState),
+                  _buildNavItem(
+                      Icons.chat_bubble_outline_rounded,
+                      AppLocalizations.of(context)!.translate('messages'),
+                      2,
+                      isDark,
+                      appState),
+                  _buildNavItem(
+                      Icons.payment_rounded,
+                      AppLocalizations.of(context)!.translate('payments_nav'),
+                      3,
+                      isDark,
+                      appState),
+                  _buildNavItem(
+                      Icons.person_outline_rounded,
+                      AppLocalizations.of(context)!.translate('profile_nav'),
+                      4,
+                      isDark,
+                      appState),
+                ],
+              ),
             ),
           ),
         ),
@@ -239,7 +241,8 @@ class _ParentHomeState extends State<_ParentHome> {
       final cachedStatus = prefs.getString('event_participation_${post.id}');
       if (cachedStatus != null) {
         currentResponse = cachedStatus;
-        debugPrint('Loaded cached participation status for ${post.id}: $cachedStatus');
+        debugPrint(
+            'Loaded cached participation status for ${post.id}: $cachedStatus');
       }
     } catch (e) {
       debugPrint('Error loading cached participation status: $e');
@@ -256,7 +259,6 @@ class _ParentHomeState extends State<_ParentHome> {
         String? successMessage;
         String? errorMessage;
         return StatefulBuilder(builder: (context, setModalState) {
-
           return BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
@@ -1285,23 +1287,23 @@ class _ParentHomeState extends State<_ParentHome> {
     return Container(
       height: 200,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF38222A) : const Color(0xFFFBE4EA),
+        color: isDark ? const Color(0xFF1B2A44) : const Color(0xFFE8F1FF),
         gradient: LinearGradient(
           colors: isDark
-              ? [const Color(0xFF452431), const Color(0xFF301B22)]
+              ? [const Color(0xFF203656), const Color(0xFF16263F)]
               : [
-                  Colors.redAccent.withValues(alpha: 0.15),
-                  Colors.pinkAccent.withValues(alpha: 0.05)
+                  Colors.blueAccent.withValues(alpha: 0.18),
+                  Colors.lightBlueAccent.withValues(alpha: 0.08)
                 ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(32),
         border: Border.all(
-            color: Colors.redAccent.withValues(alpha: 0.2), width: 1),
+            color: Colors.blueAccent.withValues(alpha: 0.2), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.redAccent.withValues(alpha: isDark ? 0.05 : 0.15),
+            color: Colors.blueAccent.withValues(alpha: isDark ? 0.05 : 0.15),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -1381,13 +1383,13 @@ class _ParentHomeState extends State<_ParentHome> {
                                         category == 'URGENT'
                                             ? Icons.warning_rounded
                                             : Icons.event_note_rounded,
-                                        color: Colors.redAccent,
+                                      color: Colors.blueAccent,
                                         size: 14),
                                     const SizedBox(width: 6),
                                     Text(
                                       category,
                                       style: const TextStyle(
-                                          color: Colors.redAccent,
+                                        color: Colors.blueAccent,
                                           fontSize: 10,
                                           fontWeight: FontWeight.w900,
                                           letterSpacing: 1.5),
@@ -1418,7 +1420,7 @@ class _ParentHomeState extends State<_ParentHome> {
                                   Text(
                                     adminSentDate,
                                     style: const TextStyle(
-                                      color: Colors.redAccent,
+                                      color: Colors.blueAccent,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w900,
                                     ),
@@ -1576,76 +1578,85 @@ class _ParentHomeState extends State<_ParentHome> {
         const SizedBox(height: 24),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildActionIcon(
-                context,
-                AppLocalizations.of(context)!.translate('timetable'),
-                Icons.grid_view_rounded,
-                Colors.purpleAccent,
-                null,
-                isDark, onTap: () {
-              final children = context.read<DashboardViewModel>().children;
-              if (children.isNotEmpty) {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) =>
-                            TimetableGridScreen(student: children[0])));
-              }
-            }),
-            Consumer<HomeworkViewModel>(
-              builder: (context, homeworkVM, child) => _buildActionIcon(
+            Expanded(
+              child: _buildActionIcon(
                   context,
-                  'Devoir/Examen',
-                  Icons.assignment_rounded,
-                  Colors.orangeAccent,
+                  AppLocalizations.of(context)!.translate('timetable'),
+                  Icons.grid_view_rounded,
+                  Colors.purpleAccent,
                   null,
-                  isDark,
-                  showBadge: homeworkVM.hasNewAssignments, onTap: () {
-                final dashVM = context.read<DashboardViewModel>();
-                if (dashVM.children.isNotEmpty) {
+                  isDark, onTap: () {
+                final children = context.read<DashboardViewModel>().children;
+                if (children.isNotEmpty) {
                   Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => HomeworkScreen(
-                              studentId: dashVM.children[0].id)));
+                          builder: (_) =>
+                              TimetableGridScreen(student: children[0])));
                 }
               }),
             ),
-            _buildActionIcon(
-                context,
-                AppLocalizations.of(context)!.translate('trip'),
-                Icons.location_on_rounded,
-                Colors.blueAccent,
-                null,
-                isDark, onTap: () {
-              final children = context.read<DashboardViewModel>().children;
-              if (children.isNotEmpty) {
-                Navigator.push(
+            Expanded(
+              child: Consumer<HomeworkViewModel>(
+                builder: (context, homeworkVM, child) => _buildActionIcon(
                     context,
-                    MaterialPageRoute(
-                        builder: (_) => LocationScreen(student: children[0])));
-              }
-            }),
-            _buildActionIcon(
-                context,
-                AppLocalizations.of(context)!.translate('Suivi scolaire'),
-                Icons.bar_chart_rounded,
-                Colors.greenAccent,
-                null,
-                isDark, onTap: () {
-              final children = context.read<DashboardViewModel>().children;
-              if (children.isEmpty) return;
-              final student = children[0];
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => SuiviScolaireScreen(
-                    student: student,
+                    'Devoir/Examen',
+                    Icons.assignment_rounded,
+                    Colors.orangeAccent,
+                    null,
+                    isDark,
+                    showBadge: homeworkVM.hasNewAssignments, onTap: () {
+                  final dashVM = context.read<DashboardViewModel>();
+                  if (dashVM.children.isNotEmpty) {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => HomeworkScreen(
+                                studentId: dashVM.children[0].id)));
+                  }
+                }),
+              ),
+            ),
+            Expanded(
+              child: _buildActionIcon(
+                  context,
+                  AppLocalizations.of(context)!.translate('trip'),
+                  Icons.location_on_rounded,
+                  Colors.blueAccent,
+                  null,
+                  isDark, onTap: () {
+                final children = context.read<DashboardViewModel>().children;
+                if (children.isNotEmpty) {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => LocationScreen(student: children[0])));
+                }
+              }),
+            ),
+            Expanded(
+              child: _buildActionIcon(
+                  context,
+                  AppLocalizations.of(context)!.translate('Suivi scolaire'),
+                  Icons.bar_chart_rounded,
+                  Colors.greenAccent,
+                  null,
+                  isDark, onTap: () {
+                final children = context.read<DashboardViewModel>().children;
+                if (children.isEmpty) return;
+                final student = children[0];
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SuiviScolaireScreen(
+                      student: student,
+                    ),
                   ),
-                ),
-              );
-            }),
+                );
+              }),
+            ),
           ],
         ),
       ],
@@ -1720,12 +1731,17 @@ class _ParentHomeState extends State<_ParentHome> {
             ],
           ),
           const SizedBox(height: 12),
-          Text(label,
-              style: TextStyle(
-                  color: isDark ? Colors.white70 : const Color(0xFF0F172A),
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.5)),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                color: isDark ? Colors.white70 : const Color(0xFF0F172A),
+                fontSize: 9.5,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5),
+          ),
         ],
       ),
     ).animate().scale();
@@ -1739,13 +1755,17 @@ class _ParentHomeState extends State<_ParentHome> {
       children: [
         Row(
           children: [
-            Text('Évolution Globale',
-                style: TextStyle(
-                    color: textColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.5)),
-            const Spacer(),
+            Expanded(
+              child: Text('Évolution Globale',
+                  style: TextStyle(
+                      color: textColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+            ),
+            const SizedBox(width: 8),
             _buildChartSelector(
               _selectedSemester == 'all'
                   ? 'Année Complète'

@@ -59,7 +59,12 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
             left: 24,
             right: 24,
             bottom: 24,
-            child: _buildBottomNav(isDark),
+            child: SafeArea(
+              top: false,
+              left: false,
+              right: false,
+              child: _buildBottomNav(isDark),
+            ),
           ).animate().slideY(
               begin: 1,
               duration: const Duration(milliseconds: 800),
@@ -222,10 +227,6 @@ class _TeacherHomeState extends State<_TeacherHome> {
       List<ClassModel> allClasses = results[3] as List<ClassModel>;
       final absentToday = results[4] as int;
 
-      // Fall back to mock data when API returns nothing
-      if (classes.isEmpty) classes = MockDataService.getClasses();
-      if (allClasses.isEmpty) allClasses = MockDataService.getClasses();
-
       // Encomapss myClasses with accurate student counts from allClasses
       // because getMyClasses originally strips off studentCount property
       int totalStudents = 0;
@@ -265,21 +266,17 @@ class _TeacherHomeState extends State<_TeacherHome> {
       }
     } catch (e) {
       if (mounted) {
-        final mockClasses = MockDataService.getClasses();
-        final mockHomework = MockDataService.getHomework();
-        final mockExams = MockDataService.getExams();
-        final totalStudents = mockClasses.fold<int>(0, (s, c) => s + c.studentCount);
         setState(() {
-          _classes = mockClasses;
+          _classes = [];
           _stats = {
-            'totalStudents': totalStudents,
-            'students': totalStudents,
-            'absentToday': 2,
-            'absent': 2,
-            'pendingCorrections': mockHomework.length,
-            'pendingAssignments': mockHomework.length,
-            'newHomework': mockExams.length,
-            'assignments': mockExams.length,
+            'totalStudents': 0,
+            'students': 0,
+            'absentToday': 0,
+            'absent': 0,
+            'pendingCorrections': 0,
+            'pendingAssignments': 0,
+            'newHomework': 0,
+            'assignments': 0,
           };
           _isLoading = false;
         });

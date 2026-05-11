@@ -347,13 +347,16 @@ class _SchoolNewsScreenState extends State<SchoolNewsScreen> {
                         color: Colors.blueAccent, size: 20),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    AppLocalizations.of(context)!.translate('news_title'),
-                    style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: primaryTextColor,
-                        fontSize: 20,
-                        letterSpacing: -0.5),
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.of(context)!.translate('news_title'),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          color: primaryTextColor,
+                          fontSize: 20,
+                          letterSpacing: -0.5),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),

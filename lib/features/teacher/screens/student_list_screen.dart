@@ -35,7 +35,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
       final students = await ApiService.instance.getStudentsByClass(widget.classModel.id);
       if (mounted) {
         setState(() {
-          _allStudents = students.isEmpty ? MockDataService.getStudents() : students;
+          _allStudents = students;
           _isLoading = false;
         });
         _applyFilters('', _selectedSort);
@@ -44,9 +44,9 @@ class _StudentListScreenState extends State<StudentListScreen> {
       debugPrint('[StudentListScreen] Error fetching students: $e');
       if (mounted) {
         setState(() {
-          _allStudents = MockDataService.getStudents();
+          _allStudents = [];
           _isLoading = false;
-          _error = null;
+          _error = 'Impossible de charger la liste des élèves pour cette classe.';
         });
         _applyFilters('', _selectedSort);
       }

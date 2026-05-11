@@ -57,10 +57,9 @@ class TimetableViewModel extends ChangeNotifier {
 
     try {
       _timetable = await _apiService.getTimetable(studentId);
-      if (_timetable.isEmpty) _timetable = MockDataService.getTimetable();
     } catch (e) {
-      _timetable = MockDataService.getTimetable();
-      if (!silent) _errorMessage = null;
+      _timetable = [];
+      if (!silent) _errorMessage = 'Impossible de charger l\'emploi du temps.';
     } finally {
       if (!silent) {
         _isLoading = false;
