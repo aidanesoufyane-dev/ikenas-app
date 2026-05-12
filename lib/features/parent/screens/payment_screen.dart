@@ -919,9 +919,9 @@ class _PaymentScreenState extends State<PaymentScreen>
         title: Row(
           children: [
             Container(
-              width: 42,
-              height: 42,
-              padding: const EdgeInsets.all(8),
+              width: 48,
+              height: 48,
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: isDark
                     ? Colors.white.withValues(alpha: 0.07)
@@ -933,7 +933,7 @@ class _PaymentScreenState extends State<PaymentScreen>
                         : Colors.white),
               ),
               child:
-                  Image.asset('assets/images/image3.png', fit: BoxFit.contain),
+                  Image.asset(isDark ? 'assets/images/darkicon.png' : 'assets/images/image3.png', fit: BoxFit.contain),
             ),
             const SizedBox(width: 14),
             Text(

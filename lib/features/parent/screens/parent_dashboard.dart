@@ -1160,7 +1160,7 @@ class _ParentHomeState extends State<_ParentHome> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: isDark
                       ? Colors.white.withValues(alpha: 0.05)
@@ -1169,9 +1169,9 @@ class _ParentHomeState extends State<_ParentHome> {
                   border: Border.all(color: borderCol),
                 ),
                 child: Image.asset(
-                  'assets/images/image3.png',
-                  width: 24,
-                  height: 24,
+                  isDark ? 'assets/images/darkicon.png' : 'assets/images/image3.png',
+                  width: 32,
+                  height: 32,
                 ),
               ),
               const SizedBox(width: 12),

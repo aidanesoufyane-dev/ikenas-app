@@ -466,8 +466,9 @@ class _AuthScreenState extends State<AuthScreen> {
                   ],
                 ),
                 child: Center(
-                    child: Image.asset('assets/images/image3.png',
-                        width: 56, height: 56, fit: BoxFit.contain)))
+                    child: Image.asset(
+                        isDark ? 'assets/images/darkicon.png' : 'assets/images/image3.png',
+                        width: 64, height: 64, fit: BoxFit.contain)))
             .animate()
             .shimmer(
                 duration: 2.seconds,

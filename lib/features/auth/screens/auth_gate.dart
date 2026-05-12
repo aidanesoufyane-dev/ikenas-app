@@ -124,9 +124,9 @@ class _AuthGateState extends State<AuthGate> {
                       ],
                     ),
                     child: Image.asset(
-                      'assets/images/image3.png',
-                      width: 48,
-                      height: 48,
+                      Theme.of(context).brightness == Brightness.dark ? 'assets/images/darkicon.png' : 'assets/images/image3.png',
+                      width: 64,
+                      height: 64,
                       fit: BoxFit.contain,
                     ),
                   ),

@@ -91,9 +91,9 @@ class _ChatScreenState extends State<ChatScreen> {
             : Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
-                    padding: const EdgeInsets.all(8),
+                    width: 48,
+                    height: 48,
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: isDark
                           ? Colors.white.withValues(alpha: 0.1)
@@ -102,7 +102,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       border: Border.all(
                           color: secondaryTextColor.withValues(alpha: 0.1)),
                     ),
-                    child: Image.asset('assets/images/image3.png',
+                    child: Image.asset(isDark ? 'assets/images/darkicon.png' : 'assets/images/image3.png',
                         fit: BoxFit.contain),
                   ),
                   const SizedBox(width: 16),
