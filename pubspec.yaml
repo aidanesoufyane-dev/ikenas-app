@@ -63,6 +63,7 @@ flutter:
 
   assets:
     - assets/images/image3.png
+    - assets/images/darkicon.png
     - assets/images/avatars/
     - assets/lang/
     - avatarss/
