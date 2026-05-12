@@ -62,7 +62,7 @@ class LocationViewModel extends ChangeNotifier {
     _history = [
       LocationHistoryRecord(
         title: 'Départ de l\'école',
-        subtitle: 'Ikenas — Route principale',
+        subtitle: 'SchooLine â€” Route principale',
         time: '11:05',
         icon: Icons.school_rounded,
         color: Colors.blueAccent,

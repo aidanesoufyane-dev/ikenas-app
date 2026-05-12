@@ -444,8 +444,8 @@ class _AuthScreenState extends State<AuthScreen> {
     return Column(
       children: [
         Container(
-                width: 80,
-                height: 80,
+                width: 100,
+                height: 100,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: headerBg,
@@ -467,14 +467,14 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
                 child: Center(
                     child: Image.asset('assets/images/image3.png',
-                        width: 36, height: 36, fit: BoxFit.contain)))
+                        width: 56, height: 56, fit: BoxFit.contain)))
             .animate()
             .shimmer(
                 duration: 2.seconds,
                 color: isDark ? Colors.white12 : Colors.white),
         const SizedBox(height: 32),
         Text(
-          'Ikenas',
+          'SchooLine',
           style: TextStyle(
             color: primaryTextColor,
             fontSize: 36,

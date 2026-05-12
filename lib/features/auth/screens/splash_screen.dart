@@ -94,7 +94,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
                   // App Name with Ultimate Contrast
                   Text(
-                    'Ikenas',
+                    'SchooLine',
                     style: TextStyle(
                       color: primaryTextColor,
                       fontSize: 44,

@@ -53,7 +53,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => SecurityViewModel()),
         ChangeNotifierProvider(create: (_) => TimetableViewModel()),
       ],
-      child: const IkenasApp(),
+      child: const SchooLineApp(),
     ),
   );
 
@@ -63,8 +63,8 @@ void main() async {
       );
 }
 
-class IkenasApp extends StatelessWidget {
-  const IkenasApp({super.key});
+class SchooLineApp extends StatelessWidget {
+  const SchooLineApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +72,7 @@ class IkenasApp extends StatelessWidget {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Ikenas',
+      title: 'SchooLine',
       theme: appState.isDarkMode ? AppTheme.darkTheme : AppTheme.lightTheme,
       locale: appState.locale,
       supportedLocales: const [

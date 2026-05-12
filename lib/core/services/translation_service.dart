@@ -15,8 +15,8 @@ class TranslationService {
     // 1. Don't translate if text is empty or numeric
     if (text.trim().isEmpty || double.tryParse(text) != null) return text;
 
-    // 2. Ikenas Protection: Never translate the app name
-    if (text.toLowerCase() == 'ikenas') return 'Ikenas';
+    // 2. SchooLine Protection: Never translate the app name
+    if (text.toLowerCase() == 'schooline') return 'SchooLine';
 
     // 3. Check Cache
     final cacheKey = '${text}_$targetLanguageCode';
@@ -48,13 +48,13 @@ class TranslationService {
     // In a real scenario, this would be an HTTP call to Gemini.
     await Future.delayed(const Duration(milliseconds: 300));
 
-    // Protection: Even the AI shouldn't change Ikenas
+    // Protection: Even the AI shouldn't change SchooLine
     String processedText =
-        text.replaceAll(RegExp(r'Ikenas', caseSensitive: false), '[[IKENAS]]');
+        text.replaceAll(RegExp(r'SchooLine', caseSensitive: false), '[[SCHOOLINE]]');
 
     // The AI handles everything in production.
-    // Use processedText to simulate transformation then restore Ikenas
-    return processedText.replaceAll('[[IKENAS]]', 'Ikenas');
+    // Use processedText to simulate transformation then restore SchooLine
+    return processedText.replaceAll('[[SCHOOLINE]]', 'SchooLine');
   }
 
   void clearCache() {

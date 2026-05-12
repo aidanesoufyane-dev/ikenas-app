@@ -515,19 +515,36 @@ class SuiviViewModel extends ChangeNotifier {
   // Helper to find attendance record for a specific date
   AttendanceRecord? getAttendanceForDate(DateTime dt) {
     for (var a in _absences) {
+      DateTime? attendanceDate;
       try {
-        final attendanceDate = DateTime.parse(a.date);
-        if (attendanceDate.year == dt.year &&
-            attendanceDate.month == dt.month &&
-            attendanceDate.day == dt.day) {
-          return a;
-        }
+        attendanceDate = DateTime.parse(a.date);
       } catch (e) {
-        // Fallback for non-standard formats if possible
-        if (a.date.contains(
-            '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}')) {
-          return a;
-        }
+        // Fallback for custom formats like DD/MM/YYYY
+        try {
+          if (a.date.contains('/')) {
+            List<String> parts = a.date.split(' ')[0].split('/'); // in case there's time taking the first part
+            if (parts.length == 3) {
+               attendanceDate = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+            }
+          } else if (a.date.contains('-')) {
+             List<String> parts = a.date.split(' ')[0].split('-');
+             if (parts.length == 3 && parts[0].length <= 2) {
+                 attendanceDate = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+             }
+          }
+        } catch (_) {}
+      }
+      
+      if (attendanceDate != null &&
+          attendanceDate.year == dt.year &&
+          attendanceDate.month == dt.month &&
+          attendanceDate.day == dt.day) {
+        return a;
+      }
+      
+      // Additional text fallback for YYYY-MM-DD
+      if (a.date.contains('${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}')) {
+        return a;
       }
     }
     return null;

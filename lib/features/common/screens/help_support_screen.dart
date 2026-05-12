@@ -80,7 +80,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                           ),
                         ),
                         child: Text(
-                          "Bonjour ! Je suis Ikenas AI, votre assistant virtuel. Comment puis-je vous aider avec l'application aujourd'hui ?",
+                          "Bonjour ! Je suis SchooLine AI, votre assistant virtuel. Comment puis-je vous aider avec l'application aujourd'hui ?",
                           style: TextStyle(
                               color: primaryTextColor,
                               fontWeight: FontWeight.bold,

@@ -166,7 +166,7 @@ class PdfReceiptService {
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text('IKENAS EDUCATION MANAGEMENT', 
+                pw.Text('SCHOOLINE EDUCATION MANAGEMENT', 
                   style: pw.TextStyle(fontSize: 16, color: _blue, letterSpacing: 1)),
                 pw.SizedBox(height: 2),
                 pw.Text('REÇU DE PAIEMENT', 

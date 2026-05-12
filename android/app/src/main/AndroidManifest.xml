@@ -14,9 +14,9 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
 
     <application
-        android:label="Ikenas"
+        android:label="SchooLine"
         android:name="${applicationName}"
-        android:icon="@drawable/image30">
+        android:icon="@drawable/image3">
         <activity
             android:name=".MainActivity"
             android:exported="true"

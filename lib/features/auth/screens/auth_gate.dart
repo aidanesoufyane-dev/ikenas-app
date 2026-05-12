@@ -134,7 +134,7 @@ class _AuthGateState extends State<AuthGate> {
               ),
               const SizedBox(height: 40),
               Text(
-                'Ikenas',
+                'SchooLine',
                 style: TextStyle(
                   color: primaryTextColor,
                   fontSize: 44,

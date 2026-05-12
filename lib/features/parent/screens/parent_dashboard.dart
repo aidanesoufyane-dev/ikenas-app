@@ -1175,7 +1175,7 @@ class _ParentHomeState extends State<_ParentHome> {
                 ),
               ),
               const SizedBox(width: 12),
-              Text('Ikenas',
+              Text('SchooLine',
                   style: TextStyle(
                       color: primaryColor,
                       fontWeight: FontWeight.w900,
